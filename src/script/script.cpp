@@ -141,6 +141,11 @@ std::string GetOpName(opcodetype opcode)
     case OP_ISCOINSTAKE            : return "OP_ISCOINSTAKE";
     case OP_NOP10                  : return "OP_NOP10";
 
+    // Smart contract VM extension
+     case OP_CREATE                 : return "OP_CREATE";
+     case OP_CALL                   : return "OP_CALL";
+     case OP_SPEND                  : return "OP_SPEND";
+
     // Opcode added by BIP 342 (Tapscript)
     case OP_CHECKSIGADD            : return "OP_CHECKSIGADD";
 
