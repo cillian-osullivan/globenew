@@ -170,6 +170,24 @@ void base_uint<BITS>::SetHex(const std::string& str)
 }
 
 template <unsigned int BITS>
+std::string base_uint<BITS>::GetReverseHex() const
+{
+    return ArithToUint256(*this).GetReverseHex();
+}
+template <unsigned int BITS>
+void base_uint<BITS>::SetReverseHex(const char* psz)
+{
+    uint256 tmp;
+    tmp.SetReverseHex(psz);
+    *this = UintToArith256(tmp);
+}
+template <unsigned int BITS>
+void base_uint<BITS>::SetReverseHex(const std::string& str)
+{
+    SetReverseHex(str.c_str());
+}
+
+template <unsigned int BITS>
 std::string base_uint<BITS>::ToString() const
 {
     return GetHex();
@@ -192,6 +210,9 @@ unsigned int base_uint<BITS>::bits() const
 
 // Explicit instantiations for base_uint<256>
 template class base_uint<256>;
+template std::string base_uint<256>::GetReverseHex() const;
+template void base_uint<256>::SetReverseHex(const char*);
+template void base_uint<256>::SetReverseHex(const std::string&);
 
 // This implementation directly uses shifts instead of going
 // through an intermediate MPI representation.
