@@ -203,6 +203,12 @@ enum opcodetype
     OP_ISCOINSTAKE = OP_NOP9,
     OP_NOP10 = 0xb9,
 
+
+	// Smart contract extension
+     OP_CREATE = 0xc1,
+     OP_CALL = 0xc2,
+     OP_SPEND = 0xc3,
+
     // Opcode added by BIP 342 (Tapscript)
     OP_CHECKSIGADD = 0xba,
 
