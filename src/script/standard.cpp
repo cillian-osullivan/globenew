@@ -740,6 +740,11 @@ std::vector<std::tuple<uint8_t, uint8_t, CScript>> TaprootBuilder::GetTreeTuples
     return tuples;
 }
 
+bool IsValidContractSenderAddress(const CTxDestination &dest)
+ {
+     return std::holds_alternative<PKHash>(dest);
+ }
+
 bool GetSenderPubKey(const CScript &outputPubKey, CScript &senderPubKey)
  {
      if(outputPubKey.HasOpSender())
