@@ -225,6 +225,8 @@ public:
     uint32_t nTime{0};
     uint32_t nBits{0};
     uint32_t nNonce{0};
+    uint256 hashStateRoot{}; // globe
+    uint256 hashUTXORoot{}; // globe
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId{0};
@@ -242,7 +244,9 @@ public:
           hashWitnessMerkleRoot{block.hashWitnessMerkleRoot},
           nTime{block.nTime},
           nBits{block.nBits},
-          nNonce{block.nNonce}
+          nNonce{block.nNonce},
+          hashStateRoot{block.hashStateRoot},
+          hashUTXORoot{block.hashUTXORoot}
     {
     }
 
@@ -279,6 +283,8 @@ public:
         block.nTime = nTime;
         block.nBits = nBits;
         block.nNonce = nNonce;
+        block.hashStateRoot = hashStateRoot; // globe
+        block.hashUTXORoot = hashUTXORoot; // globe
         return block;
     }
 
@@ -445,6 +451,8 @@ public:
         READWRITE(obj.nTime);
         READWRITE(obj.nBits);
         READWRITE(obj.nNonce);
+        READWRITE(obj.hashStateRoot); // globe
+        READWRITE(obj.hashUTXORoot); // globe
     }
 
     uint256 ConstructBlockHash() const
@@ -457,6 +465,8 @@ public:
         block.nTime = nTime;
         block.nBits = nBits;
         block.nNonce = nNonce;
+        block.hashStateRoot = hashStateRoot; // globe
+        block.hashUTXORoot = hashUTXORoot; // globe
         return block.GetHash();
     }
 
@@ -493,6 +503,12 @@ public:
         if (nHeight < 0 || nHeight >= (int)vChain.size())
             return nullptr;
         return vChain[nHeight];
+    }
+
+    /** Compare two chains efficiently. */
+    friend bool operator==(const CChain &a, const CChain &b) {
+        return a.vChain.size() == b.vChain.size() &&
+               a.vChain[a.vChain.size() - 1] == b.vChain[b.vChain.size() - 1];
     }
 
     /** Efficiently check whether a block is present in this chain. */
