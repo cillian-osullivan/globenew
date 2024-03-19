@@ -25,6 +25,18 @@ base_blob<BITS>::base_blob(const uint8_t *p, size_t l)
 };
 
 template <unsigned int BITS>
+std::string base_blob<BITS>::GetReverseHex() const
+{
+    char psz[sizeof(m_data) * 2 + 1];
+    int j=0;
+    for (int i = sizeof(m_data)-1; i >= 0; i--) {
+        sprintf(psz + j * 2, "%02x", m_data[sizeof(m_data) - i - 1]);
+        j++;
+    }
+    return std::string(psz, psz + sizeof(m_data) * 2);
+}
+
+template <unsigned int BITS>
 std::string base_blob<BITS>::GetHex() const
 {
     uint8_t m_data_rev[WIDTH];
@@ -69,10 +81,32 @@ void base_blob<BITS>::SetHex(const std::string& str)
 }
 
 template <unsigned int BITS>
+void base_blob<BITS>::SetReverseHex(const char* psz)
+{
+    SetHex(psz);
+    //reverse in-place
+    int left = 0;
+    int right = size()-1;
+    unsigned char* p1 = (unsigned char*)m_data;
+    while(left < right){
+        int temp=p1[left];
+        p1[left++] = p1[right];
+        p1[right--] = temp;
+    }
+}
+
+template <unsigned int BITS>
+void base_blob<BITS>::SetReverseHex(const std::string& str)
+{
+    SetReverseHex(str.c_str());
+}
+
+template <unsigned int BITS>
 std::string base_blob<BITS>::ToString() const
 {
     return (GetHex());
 }
+
 
 // Explicit instantiations for base_blob<160>
 template base_blob<160>::base_blob(const std::vector<unsigned char>&);
@@ -81,6 +115,9 @@ template std::string base_blob<160>::ToString() const;
 template void base_blob<160>::SetHex(const char*);
 template void base_blob<160>::SetHex(const std::string&);
 template base_blob<160>::base_blob(const uint8_t *p, size_t l);
+template std::string base_blob<160>::GetReverseHex() const;
+template void base_blob<160>::SetReverseHex(const char*);
+template void base_blob<160>::SetReverseHex(const std::string&);
 
 // Explicit instantiations for base_blob<256>
 template base_blob<256>::base_blob(const std::vector<unsigned char>&);
@@ -89,6 +126,9 @@ template std::string base_blob<256>::ToString() const;
 template void base_blob<256>::SetHex(const char*);
 template void base_blob<256>::SetHex(const std::string&);
 template base_blob<256>::base_blob(const uint8_t *p, size_t l);
+template std::string base_blob<256>::GetReverseHex() const;
+template void base_blob<256>::SetReverseHex(const char*);
+template void base_blob<256>::SetReverseHex(const std::string&);
 
 const uint256 uint256::ZERO(0);
 const uint256 uint256::ONE(1);
