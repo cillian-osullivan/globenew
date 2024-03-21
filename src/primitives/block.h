@@ -26,6 +26,8 @@ public:
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
     uint256 hashWitnessMerkleRoot;
+    uint256 hashStateRoot; // globe
+    uint256 hashUTXORoot; // globe
     uint32_t nTime;
     uint32_t nBits;
     uint32_t nNonce;
@@ -36,7 +38,7 @@ public:
     }
 
     SERIALIZE_METHODS(CBlockHeader, obj) {
-        READWRITE(obj.nVersion, obj.hashPrevBlock, obj.hashMerkleRoot);
+        READWRITE(obj.nVersion, obj.hashPrevBlock, obj.hashMerkleRoot, obj.hashStateRoot, obj.hashUTXORoot);
         if (obj.IsParticlVersion()) {
             READWRITE(obj.hashWitnessMerkleRoot);
         }
@@ -49,6 +51,8 @@ public:
         hashPrevBlock.SetNull();
         hashMerkleRoot.SetNull();
         hashWitnessMerkleRoot.SetNull();
+	hashStateRoot.SetNull(); // globe
+	hashUTXORoot.SetNull(); // globe
         nTime = 0;
         nBits = 0;
         nNonce = 0;
@@ -60,6 +64,7 @@ public:
     }
 
     uint256 GetHash() const;
+    uint256 GetHashWithoutSign() const;
 
     NodeSeconds Time() const
     {
@@ -69,6 +74,23 @@ public:
     int64_t GetBlockTime() const
     {
         return (int64_t)nTime;
+    }
+
+    CBlockHeader& operator=(const CBlockHeader& other) //qtum
+    {
+        if (this != &other)
+        {
+            this->nVersion       = other.nVersion;
+            this->hashPrevBlock  = other.hashPrevBlock;
+            this->hashMerkleRoot = other.hashMerkleRoot;
+	    this->hashWitnessMerkleRoot = other.hashWitnessMerkleRoot;
+            this->nTime          = other.nTime;
+            this->nBits          = other.nBits;
+            this->nNonce         = other.nNonce;
+            this->hashStateRoot  = other.hashStateRoot;
+            this->hashUTXORoot   = other.hashUTXORoot;
+        }
+        return *this;
     }
 
     bool IsParticlVersion() const
@@ -149,6 +171,8 @@ public:
         block.hashPrevBlock         = hashPrevBlock;
         block.hashMerkleRoot        = hashMerkleRoot;
         block.hashWitnessMerkleRoot = hashWitnessMerkleRoot;
+	block.hashStateRoot  = hashStateRoot; // globe
+        block.hashUTXORoot   = hashUTXORoot; // globe
         block.nTime                 = nTime;
         block.nBits                 = nBits;
         block.nNonce                = nNonce;
