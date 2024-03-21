@@ -223,6 +223,12 @@ enum opcodetype
     // Opcode added by BIP 342 (Tapscript)
     OP_CHECKSIGADD = 0xba,
 
+    // Execute EXT byte code.
+    OP_CREATE = 0xc1,
+    OP_CALL = 0xc2,
+    OP_SPEND = 0xc3,
+    OP_SENDER = 0xc4,
+
     OP_INVALIDOPCODE = 0xff,
 };
 
@@ -571,6 +577,16 @@ public:
         return (opcodetype)(OP_1+n-1);
     }
 
+    int Find(opcodetype op) const
+    {
+        int nFound = 0;
+        opcodetype opcode = OP_INVALIDOPCODE;
+        for (const_iterator pc = begin(); pc != end() && GetOp(pc, opcode);)
+            if (opcode == op)
+                ++nFound;
+        return nFound;
+    }
+
     /**
      * Pre-version-0.6, Bitcoin always counted CHECKMULTISIGs
      * as 20 sigops. With pay-to-script-hash, that changed:
@@ -623,6 +639,26 @@ public:
     bool IsUnspendable() const
     {
         return (size() > 0 && *begin() == OP_RETURN) || (size() > MAX_SCRIPT_SIZE);
+    }
+
+    bool HasOpCreate() const
+    {
+        return Find(OP_CREATE) == 1;
+    }
+
+    bool HasOpCall() const
+    {
+        return Find(OP_CALL) == 1;
+    }
+
+    bool HasOpSpend() const
+    {
+        return size()==1 && *begin() == OP_SPEND;
+    }
+
+    bool HasOpSender() const
+    {
+        return Find(OP_SENDER) == 1;
     }
 
     bool UpdateSenderSig(const std::vector<unsigned char>& scriptSig, CScript& scriptRet) const
