@@ -8,6 +8,9 @@
 #include <coins.h>
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
+#ifndef BUILD_GLOBE_INTERNAL
+#include <script/standard.h>
+#endif
 #include <consensus/validation.h>
 #include <primitives/transaction.h>
 #include <script/interpreter.h>
@@ -662,8 +665,8 @@ bool CheckTransaction(const CTransaction& tx, TxValidationState &state)
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-vin-empty");
 
     // Size limits (this doesn't take the witness into account, as that hasn't been checked for malleability)
-    if (::GetSerializeSize(tx, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT)
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-oversize");
+    if (::GetSerializeSize(tx, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) > MAX_TRANSACTION_BASE_SIZE || 
+        ::GetSerializeSize(tx, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * WITNESS_SCALE_FACTOR > dgpMaxBlockWeight)
 
     if (tx.IsParticlVersion()) {
         if (state.m_clamp_tx_version && tx.GetParticlVersion() != PARTICL_TXN_VERSION) {
@@ -739,6 +742,18 @@ bool CheckTransaction(const CTransaction& tx, TxValidationState &state)
             nValueOut += txout.nValue;
             if (!MoneyRange(nValueOut))
                 return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-txouttotal-toolarge");
+
+#ifndef BUILD_GLOBE_INTERNAL
+         /////////////////////////////////////////////////////////// // globe
+         if (txout.scriptPubKey.HasOpCall() || txout.scriptPubKey.HasOpCreate() || txout.scriptPubKey.HasOpSender()) {
+             std::vector<std::vector<unsigned char>> vSolutions;
+             TxoutType whichType = Solver(txout.scriptPubKey, vSolutions, true);
+             if (whichType == TxoutType::NONSTANDARD) {
+                 return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-contract-nonstandard");
+             }
+         }
+         ///////////////////////////////////////////////////////////
+ #endif
         }
     }
 
