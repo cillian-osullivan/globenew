@@ -788,7 +788,11 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         const std::vector<CRecipient>& vecSend,
         int change_pos,
         const CCoinControl& coin_control,
-        bool sign) EXCLUSIVE_LOCKS_REQUIRED(wallet.cs_wallet)
+        bool sign) EXCLUSIVE_LOCKS_REQUIRED(wallet.cs_wallet),
+        //bool sign, 
+        CAmount nGasFee = 0, 
+        bool hasSender = false, 
+        const CTxDestination& signSenderAddress = CNoDestination()) EXCLUSIVE_LOCKS_REQUIRED(wallet.cs_wallet)
 {
     AssertLockHeld(wallet.cs_wallet);
 
@@ -822,6 +826,12 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     const OutputType change_type = wallet.TransactionChangeType(coin_control.m_change_type ? *coin_control.m_change_type : wallet.m_default_change_type, vecSend);
     ReserveDestination reservedest(&wallet, change_type);
     unsigned int outputs_to_subtract_fee_from = 0; // The number of outputs which we are subtracting the fee from
+    COutPoint senderInput;
+    if(hasSender && coin_control.HasSelected()){
+       std::vector<COutPoint> vSenderInputs;
+       coin_control.ListSelected(vSenderInputs);
+       senderInput=vSenderInputs[0];
+    }
     for (const auto& recipient : vecSend) {
         recipients_sum += recipient.nAmount;
 
@@ -928,7 +938,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     }
 
     // Include the fees for things that aren't inputs, excluding the change output
-    const CAmount not_input_fees = coin_selection_params.m_effective_feerate.GetFee(coin_selection_params.tx_noinputs_size);
+    const CAmount not_input_fees = coin_selection_params.m_effective_feerate.GetFee(coin_selection_params.tx_noinputs_size)+nGasFee;
     CAmount selection_target = recipients_sum + not_input_fees;
 
     // Get available coins
@@ -1039,6 +1049,11 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         return util::Error{error};
     }
 
+    // Signing transaction outputs
+    if(sign && txNew.HasOpSender() && !wallet.SignTransactionOutput(txNew)) {
+        return util::Error{_("Signing transaction output failed")};
+    }
+
     if (sign && !wallet.SignTransaction(txNew)) {
         return util::Error{_("Signing transaction failed")};
     }
@@ -1053,7 +1068,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         return util::Error{_("Transaction too large")};
     }
 
-    if (nFeeRet > wallet.m_default_max_tx_fee) {
+    if (!tx->HasCreateOrCall() && nFeeRet > wallet.m_default_max_tx_fee) {
         return util::Error{TransactionErrorString(TransactionError::MAX_FEE_EXCEEDED)};
     }
 
@@ -1084,7 +1099,10 @@ util::Result<CreatedTransactionResult> CreateTransaction(
         const std::vector<CRecipient>& vecSend,
         int change_pos,
         const CCoinControl& coin_control,
-        bool sign)
+        bool sign, 
+        CAmount nGasFee, 
+        bool hasSender, 
+        const CTxDestination& signSenderAddress)
 {
     if (vecSend.empty()) {
         return util::Error{_("Transaction must have at least one recipient")};
@@ -1096,7 +1114,7 @@ util::Result<CreatedTransactionResult> CreateTransaction(
 
     LOCK(wallet.cs_wallet);
 
-    auto res = CreateTransactionInternal(wallet, vecSend, change_pos, coin_control, sign);
+    auto res = CreateTransactionInternal(wallet, vecSend, change_pos, coin_control, sign, nGasFee, hasSender, signSenderAddress);
     TRACE4(coin_selection, normal_create_tx_internal, wallet.GetName().c_str(), bool(res),
            res ? res->fee : 0, res ? res->change_pos : 0);
     if (!res) return res;
@@ -1106,7 +1124,7 @@ util::Result<CreatedTransactionResult> CreateTransaction(
         TRACE1(coin_selection, attempting_aps_create_tx, wallet.GetName().c_str());
         CCoinControl tmp_cc = coin_control;
         tmp_cc.m_avoid_partial_spends = true;
-        auto txr_grouped = CreateTransactionInternal(wallet, vecSend, change_pos, tmp_cc, sign);
+        auto txr_grouped = CreateTransactionInternal(wallet, vecSend, change_pos, tmp_cc, sign, nGasFee, hasSender, signSenderAddress);
         // if fee of this alternative one is within the range of the max fee, we use this one
         const bool use_aps{txr_grouped.has_value() ? (txr_grouped->fee <= txr_ungrouped.fee + wallet.m_max_aps_fee) : false};
         TRACE5(coin_selection, aps_create_tx_internal, wallet.GetName().c_str(), use_aps, txr_grouped.has_value(),
@@ -1161,7 +1179,8 @@ bool FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& nFeeRet,
         }
     }
 
-    auto res = CreateTransaction(wallet, vecSend, nChangePosInOut, coinControl, false);
+    CAmount nGasFee = wallet.GetTxGasFee(tx);
+    auto res = CreateTransaction(wallet, vecSend, nChangePosInOut, coinControl, false, nGasFee);
     if (!res) {
         error = util::ErrorString(res);
         return false;
