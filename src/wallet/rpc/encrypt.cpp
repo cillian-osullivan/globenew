@@ -54,6 +54,9 @@ RPCHelpMan walletpassphrase()
         {
         LOCK(pwallet->cs_wallet);
 
+        if (request.mode != JSONRPCRequest::EXECUTE)
+            return true;
+
         if (!pwallet->IsCrypted()) {
             throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletpassphrase was called.");
         }
@@ -152,6 +155,9 @@ RPCHelpMan walletpassphrasechange()
 
     LOCK(pwallet->cs_wallet);
 
+    if (request.mode != JSONRPCRequest::EXECUTE)
+        return true;
+
     if (!pwallet->IsCrypted()) {
         throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletpassphrasechange was called.");
     }
@@ -205,6 +211,9 @@ RPCHelpMan walletlock()
 
     LOCK(pwallet->cs_wallet);
 
+    if (request.mode != JSONRPCRequest::EXECUTE)
+        return true;
+
     if (!pwallet->IsCrypted()) {
         throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletlock was called.");
     }
@@ -248,6 +257,9 @@ RPCHelpMan encryptwallet()
     if (!pwallet) return UniValue::VNULL;
 
     LOCK(pwallet->cs_wallet);
+
+    if (request.mode != JSONRPCRequest::EXECUTE)
+        return true;
 
     if (pwallet->IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS)) {
         throw JSONRPCError(RPC_WALLET_ENCRYPTION_FAILED, "Error: wallet does not contain private keys, nothing to encrypt.");
