@@ -92,7 +92,9 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block, CBlockInde
 {
     AssertLockHeld(cs_main);
 
-    auto [mi, inserted] = m_block_index.try_emplace(block.GetHash(), block);
+    uint256 hash = block.GetHash();
+    auto [mi, inserted] = m_block_index.try_emplace(hash, block);
+    
     if (!inserted) {
         return &mi->second;
     }
@@ -416,6 +418,38 @@ const CBlockIndex* BlockManager::GetFirstStoredBlock(const CBlockIndex& start_bl
         last_block = last_block->pprev;
     }
     return last_block;
+}
+
+bool BlockManager::CheckHardened(int nHeight, const uint256& hash, const CCheckpointData& data)
+{
+    const MapCheckpoints& checkpoints = data.mapCheckpoints;
+
+    MapCheckpoints::const_iterator i = checkpoints.find(nHeight);
+    if (i == checkpoints.end()) return true;
+    return hash == i->second;
+}
+
+// Automatically select a suitable sync-checkpoint 
+const CBlockIndex* BlockManager::AutoSelectSyncCheckpoint(const CBlockIndex *pindexBest)
+{
+    const CBlockIndex *pindex = pindexBest;
+    // Search backward for a block within max span and maturity window
+    int checkpointSpan = Params().GetConsensus().CheckpointSpan(pindexBest->nHeight);
+    while (pindex->pprev && pindex->nHeight + checkpointSpan > pindexBest->nHeight)
+        pindex = pindex->pprev;
+    return pindex;
+}
+
+// Check against synchronized checkpoint
+bool BlockManager::CheckSync(int nHeight, const CBlockIndex *pindexBest)
+{
+    const CBlockIndex* pindexSync = nullptr;
+    if(nHeight)
+        pindexSync = AutoSelectSyncCheckpoint(pindexBest);
+
+    if(nHeight && nHeight <= pindexSync->nHeight)
+        return false;
+    return true;
 }
 
 // If we're using -prune with -reindex, then delete block files that will be ignored by the
