@@ -1,10 +1,10 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2021 The Bitcoin Core developers
+// Copyright (c) 2009-2021 The Globe Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_WALLET_WALLET_H
-#define BITCOIN_WALLET_WALLET_H
+#ifndef GLOBE_WALLET_WALLET_H
+#define GLOBE_WALLET_WALLET_H
 
 #include <consensus/amount.h>
 #include <fs.h>
@@ -406,7 +406,7 @@ private:
     static int64_t GetDefaultNextResend();
 
 public:
-    bool IsParticlWallet() const override { return false; };
+    bool IsGlobeWallet() const override { return false; };
     /**
      * Main wallet lock.
      * This lock protects all the fields added by CWallet.
@@ -434,7 +434,7 @@ public:
           m_name(name),
           m_database(std::move(database))
     {
-        if (!fParticlMode) {
+        if (!fGlobeMode) {
             m_min_fee = CFeeRate(DEFAULT_TRANSACTION_MINFEE_BTC);
             m_default_max_tx_fee = DEFAULT_TRANSACTION_MAXFEE_BTC;
         }
@@ -574,7 +574,7 @@ public:
     int64_t IncOrderPosNext(WalletBatch *batch = nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     DBErrors ReorderTransactions();
 
-    //! For ParticlWallet, clear cached balances from wallet called at new block and adding new transaction
+    //! For GlobeWallet, clear cached balances from wallet called at new block and adding new transaction
     virtual void ClearCachedBalances() {};
     void MarkDirty();
 
@@ -1067,7 +1067,7 @@ public:
     /* Remove token entry from the wallet */
     bool RemoveTokenEntry(const uint256& tokenHash, bool fFlushOnClose=true);
 
-    //! Particl
+    //! Globe
     bool HaveKey(const CKeyID &address) const override { return false; };
     bool GetKey(const CKeyID &address, CKey &keyOut) const override { return false; };
     bool GetPubKey(const CKeyID &address, CPubKey &pkOut) const override { return false; };
@@ -1258,4 +1258,4 @@ public:
 
 } // namespace wallet
 
-#endif // BITCOIN_WALLET_WALLET_H
+#endif // GLOBE_WALLET_WALLET_H

@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2021 The Bitcoin Core developers
+// Copyright (c) 2011-2021 The Globe Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -43,7 +43,7 @@ RPCHelpMan getnewaddress()
 
     //LOCK(pwallet->cs_wallet);
 
-    if (!pwallet->IsParticlWallet()) {
+    if (!pwallet->IsGlobeWallet()) {
         LOCK(pwallet->cs_wallet);
         if (!pwallet->CanGetAddresses()) {
             throw JSONRPCError(RPC_WALLET_ERROR, "Error: This wallet has no available keys");
@@ -56,7 +56,7 @@ RPCHelpMan getnewaddress()
         label = LabelFromValue(request.params[0]);
 
     OutputType output_type = pwallet->m_default_address_type;
-    size_t type_ofs = fParticlMode ? 4 : 1;
+    size_t type_ofs = fGlobeMode ? 4 : 1;
     if (!request.params[type_ofs].isNull()) {
         std::optional<OutputType> parsed = ParseOutputType(request.params[type_ofs].get_str());
         if (!parsed) {
@@ -67,7 +67,7 @@ RPCHelpMan getnewaddress()
         output_type = parsed.value();
     }
 
-    if (pwallet->IsParticlWallet()) {
+    if (pwallet->IsGlobeWallet()) {
         CKeyID keyID;
 
         bool fBech32 = request.params.size() > 1 ? GetBool(request.params[1]) : false;
@@ -82,7 +82,7 @@ RPCHelpMan getnewaddress()
         }
 
         CPubKey newKey;
-        CHDWallet *phdw = GetParticlWallet(pwallet.get());
+        CHDWallet *phdw = GetGlobeWallet(pwallet.get());
         {
             LOCK(phdw->cs_wallet);
             if (pwallet->IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS)) {
@@ -110,9 +110,9 @@ RPCHelpMan getnewaddress()
         }
         if (f256bit) {
             CKeyID256 idKey256 = newKey.GetID256();
-            return CBitcoinAddress(idKey256, fBech32).ToString();
+            return CGlobeAddress(idKey256, fBech32).ToString();
         }
-        return CBitcoinAddress(PKHash(newKey), fBech32).ToString();
+        return CGlobeAddress(PKHash(newKey), fBech32).ToString();
     }
 
     LOCK(pwallet->cs_wallet);
@@ -149,8 +149,8 @@ RPCHelpMan getrawchangeaddress()
 
     LOCK(pwallet->cs_wallet);
 
-    if (pwallet->IsParticlWallet()) {
-        CHDWallet *phdw = GetParticlWallet(pwallet.get());
+    if (pwallet->IsGlobeWallet()) {
+        CHDWallet *phdw = GetGlobeWallet(pwallet.get());
         CPubKey pkOut;
 
         if (0 != phdw->NewKeyFromAccount(pkOut, true)) {
@@ -236,7 +236,7 @@ RPCHelpMan listaddressgroupings()
                         {
                             {RPCResult::Type::ARR_FIXED, "", "",
                             {
-                                {RPCResult::Type::STR, "address", "The particl address"},
+                                {RPCResult::Type::STR, "address", "The globe address"},
                                 {RPCResult::Type::STR_AMOUNT, "amount", "The amount in " + CURRENCY_UNIT},
                                 {RPCResult::Type::STR, "label", /*optional=*/true, "The label"},
                             }},
@@ -286,15 +286,15 @@ RPCHelpMan addmultisigaddress()
 {
     return RPCHelpMan{"addmultisigaddress",
                 "\nAdd an nrequired-to-sign multisignature address to the wallet. Requires a new wallet backup.\n"
-                "Each key is a Particl address or hex-encoded public key.\n"
+                "Each key is a Globe address or hex-encoded public key.\n"
                 "This functionality is only intended for use with non-watchonly addresses.\n"
                 "See `importaddress` for watchonly p2sh address support.\n"
                 "If 'label' is specified, assign address to that label.\n",
                 {
                     {"nrequired", RPCArg::Type::NUM, RPCArg::Optional::NO, "The number of required signatures out of the n keys or addresses."},
-                    {"keys", RPCArg::Type::ARR, RPCArg::Optional::NO, "The particl addresses or hex-encoded public keys",
+                    {"keys", RPCArg::Type::ARR, RPCArg::Optional::NO, "The globe addresses or hex-encoded public keys",
                         {
-                            {"key", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "particl address or hex-encoded public key"},
+                            {"key", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "globe address or hex-encoded public key"},
                         },
                         },
                     {"label", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "A label to assign the addresses to."},
@@ -347,7 +347,7 @@ RPCHelpMan addmultisigaddress()
     }
 
     OutputType output_type = pwallet->m_default_address_type;
-    size_t type_ofs = fParticlMode ? 5 : 3;
+    size_t type_ofs = fGlobeMode ? 5 : 3;
     if (!request.params[type_ofs].isNull()) {
         std::optional<OutputType> parsed = ParseOutputType(request.params[type_ofs].get_str());
         if (!parsed) {
@@ -366,14 +366,14 @@ RPCHelpMan addmultisigaddress()
     std::unique_ptr<Descriptor> descriptor = InferDescriptor(GetScriptForDestination(dest), spk_man);
 
     UniValue result(UniValue::VOBJ);
-    bool fbech32 = fParticlMode && request.params.size() > 3 ? request.params[3].get_bool() : false;
-    bool f256Hash = fParticlMode && request.params.size() > 4 ? request.params[4].get_bool() : false;
+    bool fbech32 = fGlobeMode && request.params.size() > 3 ? request.params[3].get_bool() : false;
+    bool f256Hash = fGlobeMode && request.params.size() > 4 ? request.params[4].get_bool() : false;
 
     if (f256Hash) {
         CScriptID256 innerID;
         innerID.Set(inner);
         pwallet->SetAddressBook(innerID, label, "send", fbech32);
-        result.pushKV("address", CBitcoinAddress(innerID, fbech32).ToString());
+        result.pushKV("address", CGlobeAddress(innerID, fbech32).ToString());
     } else {
         pwallet->SetAddressBook(dest, label, "send", fbech32);
         result.pushKV("address", EncodeDestination(dest, fbech32));
@@ -615,14 +615,14 @@ UniValue DescribeWalletAddress(const CWallet& wallet, const CTxDestination& dest
 RPCHelpMan getaddressinfo()
 {
     return RPCHelpMan{"getaddressinfo",
-                "\nReturn information about the given particl address.\n"
+                "\nReturn information about the given globe address.\n"
                 "Some of the information will only be present if the address is in the active wallet.\n",                {
-                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The particl address to get the information of."},
+                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The globe address to get the information of."},
                 },
                 RPCResult{
                     RPCResult::Type::OBJ, "", "",
                     {
-                        {RPCResult::Type::STR, "address", "The particl address validated."},
+                        {RPCResult::Type::STR, "address", "The globe address validated."},
                         {RPCResult::Type::STR_HEX, "scriptPubKey", "The hex-encoded scriptPubKey generated by the address."},
                         {RPCResult::Type::BOOL, "ismine", "If the address is yours."},
                         {RPCResult::Type::BOOL, "iswatchonly", "If the address is watchonly."},
@@ -717,8 +717,8 @@ RPCHelpMan getaddressinfo()
     std::unique_ptr<SigningProvider> provider = pwallet->GetSolvingProvider(scriptPubKey);
 
     isminetype mine = ISMINE_NO;
-    if (IsParticlWallet(pwallet.get())) {
-        const CHDWallet *phdw = GetParticlWallet(pwallet.get());
+    if (IsGlobeWallet(pwallet.get())) {
+        const CHDWallet *phdw = GetGlobeWallet(pwallet.get());
         LOCK_ASSERTION(phdw->cs_wallet);
         if (dest.index() == DI::_CExtPubKey) {
             CExtPubKey ek = std::get<CExtPubKey>(dest);
@@ -974,7 +974,7 @@ RPCHelpMan walletdisplayaddress()
         "walletdisplayaddress",
         "Display address on an external signer for verification.",
         {
-            {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "particl address to display"},
+            {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "globe address to display"},
         },
         RPCResult{
             RPCResult::Type::OBJ,"","",

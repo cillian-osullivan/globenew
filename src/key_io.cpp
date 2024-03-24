@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2021 The Bitcoin Core developers
+// Copyright (c) 2014-2021 The Globe Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -96,16 +96,16 @@ public:
 
     std::string operator()(const CNoDestination& no) const { return {}; }
 
-    std::string operator()(const CExtPubKey &ek) const { return CBitcoinAddress(ek, m_bech32).ToString(); }
-    std::string operator()(const CStealthAddress &sxAddr) const { return CBitcoinAddress(sxAddr, m_bech32).ToString(); }
-    std::string operator()(const CKeyID256& id) const { return CBitcoinAddress(id, m_bech32).ToString(); }
-    std::string operator()(const CScriptID256& id) const { return CBitcoinAddress(id, m_bech32).ToString(); }
+    std::string operator()(const CExtPubKey &ek) const { return CGlobeAddress(ek, m_bech32).ToString(); }
+    std::string operator()(const CStealthAddress &sxAddr) const { return CGlobeAddress(sxAddr, m_bech32).ToString(); }
+    std::string operator()(const CKeyID256& id) const { return CGlobeAddress(id, m_bech32).ToString(); }
+    std::string operator()(const CScriptID256& id) const { return CGlobeAddress(id, m_bech32).ToString(); }
 };
 
 CTxDestination DecodeDestination(const std::string& str, const CChainParams& params, std::string& error_str, std::vector<int>* error_locations, bool allow_stake_only=false)
 {
     error_str = "";
-    CBitcoinAddress addr(str);
+    CGlobeAddress addr(str);
     if (addr.IsValid()) {
         if (allow_stake_only && addr.getVchVersion() == params.Bech32Prefix(CChainParams::STAKE_ONLY_PKADDR)) {
             addr.setVersion(params.Bech32Prefix(CChainParams::PUBKEY_ADDRESS));
@@ -120,7 +120,7 @@ CTxDestination DecodeDestination(const std::string& str, const CChainParams& par
     bool is_bech32 = (ToLower(str.substr(0, params.Bech32HRP().size())) == params.Bech32HRP());
 
     if (!is_bech32 && DecodeBase58Check(str, data, 21)) {
-        // base58-encoded Bitcoin addresses.
+        // base58-encoded Globe addresses.
         // Public-key-hash-addresses have version 0 (or 111 testnet).
         // The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
         const std::vector<unsigned char>& pubkey_prefix = params.Base58Prefix(CChainParams::PUBKEY_ADDRESS);
@@ -438,7 +438,7 @@ bool CBase58Data::SetString(const char* psz, unsigned int nVersionBytes)
         if (0 == memcmp(&vchTemp[0], &Params().Base58Prefix(CChainParams::EXT_SECRET_KEY)[0], 4)) {
             nVersionBytes = 4;
 
-            // Never display secret in a CBitcoinAddress
+            // Never display secret in a CGlobeAddress
 
             // Length already checked
             vchVersion = Params().Base58Prefix(CChainParams::EXT_PUBLIC_KEY);
@@ -503,14 +503,14 @@ int CBase58Data::CompareTo(const CBase58Data& b58) const
 
 namespace
 {
-class CBitcoinAddressVisitor
+class CGlobeAddressVisitor
 {
 private:
-    CBitcoinAddress* addr;
+    CGlobeAddress* addr;
     bool fBech32;
 
 public:
-    CBitcoinAddressVisitor(CBitcoinAddress* addrIn, bool fBech32_ = false) : addr(addrIn), fBech32(fBech32_) {}
+    CGlobeAddressVisitor(CGlobeAddress* addrIn, bool fBech32_ = false) : addr(addrIn), fBech32(fBech32_) {}
 
     bool operator()(const PKHash& id) const { return addr->Set(ToKeyID(id), fBech32); }
     bool operator()(const ScriptHash& id) const { return addr->Set(CScriptID(id), fBech32); }
@@ -543,41 +543,41 @@ public:
 };
 } // namespace
 
-bool CBitcoinAddress::Set(const CKeyID& id, bool fBech32)
+bool CGlobeAddress::Set(const CKeyID& id, bool fBech32)
 {
     SetData(fBech32 ? Params().Bech32Prefix(CChainParams::PUBKEY_ADDRESS)
         : Params().Base58Prefix(CChainParams::PUBKEY_ADDRESS), &id, 20);
     return true;
 }
 
-bool CBitcoinAddress::Set(const CScriptID& id, bool fBech32)
+bool CGlobeAddress::Set(const CScriptID& id, bool fBech32)
 {
     SetData(fBech32 ? Params().Bech32Prefix(CChainParams::SCRIPT_ADDRESS)
         : Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &id, 20);
     return true;
 }
 
-bool CBitcoinAddress::Set(const CKeyID256 &id, bool fBech32)
+bool CGlobeAddress::Set(const CKeyID256 &id, bool fBech32)
 {
     SetData(fBech32 ? Params().Bech32Prefix(CChainParams::PUBKEY_ADDRESS_256)
         : Params().Base58Prefix(CChainParams::PUBKEY_ADDRESS_256), &id, 32);
     return true;
 };
 
-bool CBitcoinAddress::Set(const CScriptID256 &id, bool fBech32)
+bool CGlobeAddress::Set(const CScriptID256 &id, bool fBech32)
 {
     SetData(fBech32 ? Params().Bech32Prefix(CChainParams::SCRIPT_ADDRESS_256)
         : Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS_256), &id, 32);
     return true;
 };
 
-bool CBitcoinAddress::Set(const CKeyID &id, CChainParams::Base58Type prefix, bool fBech32)
+bool CGlobeAddress::Set(const CKeyID &id, CChainParams::Base58Type prefix, bool fBech32)
 {
     SetData(fBech32 ? Params().Bech32Prefix(prefix) : Params().Base58Prefix(prefix), &id, 20);
     return true;
 }
 
-bool CBitcoinAddress::Set(const CStealthAddress &sx, bool fBech32)
+bool CGlobeAddress::Set(const CStealthAddress &sx, bool fBech32)
 {
     std::vector<uint8_t> raw;
     if (0 != sx.ToRaw(raw))
@@ -588,7 +588,7 @@ bool CBitcoinAddress::Set(const CStealthAddress &sx, bool fBech32)
     return true;
 };
 
-bool CBitcoinAddress::Set(const CExtPubKey &ek, bool fBech32)
+bool CGlobeAddress::Set(const CExtPubKey &ek, bool fBech32)
 {
     std::vector<unsigned char> vchVersion;
     uint8_t data[74];
@@ -601,7 +601,7 @@ bool CBitcoinAddress::Set(const CExtPubKey &ek, bool fBech32)
     return true;
 };
 
-bool CBitcoinAddress::Set(const CExtKeyPair &ek, bool fBech32)
+bool CGlobeAddress::Set(const CExtKeyPair &ek, bool fBech32)
 {
     std::vector<unsigned char> vchVersion;
     uint8_t data[74];
@@ -624,17 +624,17 @@ bool CBitcoinAddress::Set(const CExtKeyPair &ek, bool fBech32)
     return true;
 };
 
-bool CBitcoinAddress::Set(const CTxDestination& dest, bool fBech32)
+bool CGlobeAddress::Set(const CTxDestination& dest, bool fBech32)
 {
-    return std::visit(CBitcoinAddressVisitor(this, fBech32), dest);
+    return std::visit(CGlobeAddressVisitor(this, fBech32), dest);
 }
 
-bool CBitcoinAddress::IsValidStealthAddress() const
+bool CGlobeAddress::IsValidStealthAddress() const
 {
     return IsValidStealthAddress(Params());
 };
 
-bool CBitcoinAddress::IsValidStealthAddress(const CChainParams &params) const
+bool CGlobeAddress::IsValidStealthAddress(const CChainParams &params) const
 {
     if (vchVersion != params.Base58Prefix(CChainParams::STEALTH_ADDRESS)
         && vchVersion != params.Bech32Prefix(CChainParams::STEALTH_ADDRESS))
@@ -659,12 +659,12 @@ bool CBitcoinAddress::IsValidStealthAddress(const CChainParams &params) const
     return true;
 };
 
-bool CBitcoinAddress::IsValid() const
+bool CGlobeAddress::IsValid() const
 {
     return IsValid(Params());
 }
 
-bool CBitcoinAddress::IsValid(const CChainParams& params) const
+bool CGlobeAddress::IsValid(const CChainParams& params) const
 {
     if (m_bech32) {
         CChainParams::Base58Type prefix = CChainParams::MAX_BASE58_TYPES;
@@ -715,7 +715,7 @@ bool CBitcoinAddress::IsValid(const CChainParams& params) const
     return false;
 }
 
-bool CBitcoinAddress::IsValid(CChainParams::Base58Type prefix) const
+bool CGlobeAddress::IsValid(CChainParams::Base58Type prefix) const
 {
     if (m_bech32) {
         CChainParams::Base58Type prefixOut;
@@ -764,7 +764,7 @@ bool CBitcoinAddress::IsValid(CChainParams::Base58Type prefix) const
     return fCorrectSize && fKnownVersion;
 }
 
-CTxDestination CBitcoinAddress::Get() const
+CTxDestination CGlobeAddress::Get() const
 {
     if (!IsValid()) {
         return CNoDestination();
@@ -815,7 +815,7 @@ CTxDestination CBitcoinAddress::Get() const
     return CNoDestination();
 }
 
-CTxDestination CBitcoinAddress::GetStakeOnly() const
+CTxDestination CGlobeAddress::GetStakeOnly() const
 {
     if (!IsBech32()) {
         return CNoDestination();
@@ -826,7 +826,7 @@ CTxDestination CBitcoinAddress::GetStakeOnly() const
     return PKHash(*((uint160*)vchData.data()));
 };
 
-bool CBitcoinAddress::GetKeyID(CKeyID& keyID) const
+bool CGlobeAddress::GetKeyID(CKeyID& keyID) const
 {
     if (!IsValid() || vchVersion != Params().Base58Prefix(CChainParams::PUBKEY_ADDRESS)) {
         return false;
@@ -837,7 +837,7 @@ bool CBitcoinAddress::GetKeyID(CKeyID& keyID) const
     return true;
 }
 
-bool CBitcoinAddress::GetKeyID(CKeyID256& keyID) const
+bool CGlobeAddress::GetKeyID(CKeyID256& keyID) const
 {
     if (!IsValid() || vchVersion != Params().Base58Prefix(CChainParams::PUBKEY_ADDRESS_256)) {
         return false;
@@ -848,7 +848,7 @@ bool CBitcoinAddress::GetKeyID(CKeyID256& keyID) const
     return true;
 }
 
-bool CBitcoinAddress::GetKeyID(CKeyID &keyID, CChainParams::Base58Type prefix) const
+bool CGlobeAddress::GetKeyID(CKeyID &keyID, CChainParams::Base58Type prefix) const
 {
     if (!IsValid(prefix))
         return false;
@@ -858,12 +858,12 @@ bool CBitcoinAddress::GetKeyID(CKeyID &keyID, CChainParams::Base58Type prefix) c
     return true;
 }
 
-bool CBitcoinAddress::IsScript() const
+bool CGlobeAddress::IsScript() const
 {
     return IsValid() && vchVersion == Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS);
 }
 
-void CBitcoinSecret::SetKey(const CKey& vchSecret)
+void CGlobeSecret::SetKey(const CKey& vchSecret)
 {
     assert(vchSecret.IsValid());
     SetData(Params().Base58Prefix(CChainParams::SECRET_KEY), vchSecret.begin(), vchSecret.size());
@@ -871,7 +871,7 @@ void CBitcoinSecret::SetKey(const CKey& vchSecret)
         vchData.push_back(1);
 }
 
-CKey CBitcoinSecret::GetKey() const
+CKey CGlobeSecret::GetKey() const
 {
     CKey ret;
     assert(vchData.size() >= 32);
@@ -879,19 +879,19 @@ CKey CBitcoinSecret::GetKey() const
     return ret;
 }
 
-bool CBitcoinSecret::IsValid() const
+bool CGlobeSecret::IsValid() const
 {
     bool fExpectedFormat = vchData.size() == 32 || (vchData.size() == 33 && vchData[32] == 1);
     bool fCorrectVersion = vchVersion == Params().Base58Prefix(CChainParams::SECRET_KEY);
     return fExpectedFormat && fCorrectVersion;
 }
 
-bool CBitcoinSecret::SetString(const char* pszSecret)
+bool CGlobeSecret::SetString(const char* pszSecret)
 {
     return CBase58Data::SetString(pszSecret) && IsValid();
 }
 
-bool CBitcoinSecret::SetString(const std::string& strSecret)
+bool CGlobeSecret::SetString(const std::string& strSecret)
 {
     return SetString(strSecret.c_str());
 }

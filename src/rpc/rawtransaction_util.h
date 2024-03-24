@@ -1,14 +1,14 @@
-// Copyright (c) 2017-2021 The Bitcoin Core developers
+// Copyright (c) 2017-2021 The Globe Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_RPC_RAWTRANSACTION_UTIL_H
-#define BITCOIN_RPC_RAWTRANSACTION_UTIL_H
+#ifndef GLOBE_RPC_RAWTRANSACTION_UTIL_H
+#define GLOBE_RPC_RAWTRANSACTION_UTIL_H
 
 #include <string>
 #include <optional>
 
-// Particl
+// Globe
 #include <map>
 
 struct bilingual_str;
@@ -52,4 +52,4 @@ void SignTransactionOutputResultToJSON(CMutableTransaction& mtx, bool complete, 
 
 void CheckSenderSignatures(CMutableTransaction& mtx);
 
-#endif // BITCOIN_RPC_RAWTRANSACTION_UTIL_H
+#endif // GLOBE_RPC_RAWTRANSACTION_UTIL_H

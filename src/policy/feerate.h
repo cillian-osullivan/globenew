@@ -1,10 +1,10 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2021 The Bitcoin Core developers
+// Copyright (c) 2009-2021 The Globe Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_POLICY_FEERATE_H
-#define BITCOIN_POLICY_FEERATE_H
+#ifndef GLOBE_POLICY_FEERATE_H
+#define GLOBE_POLICY_FEERATE_H
 
 #include <consensus/amount.h>
 #include <serialize.h>
@@ -76,4 +76,4 @@ public:
     SERIALIZE_METHODS(CFeeRate, obj) { READWRITE(obj.nSatoshisPerK); }
 };
 
-#endif // BITCOIN_POLICY_FEERATE_H
+#endif // GLOBE_POLICY_FEERATE_H

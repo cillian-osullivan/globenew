@@ -1,10 +1,10 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2021 The Bitcoin Core developers
+// Copyright (c) 2009-2021 The Globe Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_KEY_IO_H
-#define BITCOIN_KEY_IO_H
+#ifndef GLOBE_KEY_IO_H
+#define GLOBE_KEY_IO_H
 
 #include <chainparams.h>
 #include <key.h>
@@ -69,13 +69,13 @@ public:
     bool IsBech32() const {return m_bech32;}
 };
 
-/** base58-encoded Bitcoin addresses.
+/** base58-encoded Globe addresses.
  * Public-key-hash-addresses have version 0 (or 111 testnet).
  * The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
  * Script-hash-addresses have version 5 (or 196 testnet).
  * The data vector contains RIPEMD160(SHA256(cscript)), where cscript is the serialized redemption script.
  */
-class CBitcoinAddress : public CBase58Data {
+class CGlobeAddress : public CBase58Data {
 public:
     bool Set(const CKeyID &id, bool fBech32 = false);
     bool Set(const CScriptID &id, bool fBech32 = false);
@@ -93,11 +93,11 @@ public:
     bool IsValid(const CChainParams &params) const;
     bool IsValid(CChainParams::Base58Type prefix) const;
 
-    CBitcoinAddress() {}
-    explicit CBitcoinAddress(const CTxDestination &dest) { Set(dest); }
-    explicit CBitcoinAddress(const CTxDestination &dest, bool bech32) { Set(dest, bech32); }
-    explicit CBitcoinAddress(const std::string& strAddress) { SetString(strAddress); }
-    explicit CBitcoinAddress(const char* pszAddress) { SetString(pszAddress); }
+    CGlobeAddress() {}
+    explicit CGlobeAddress(const CTxDestination &dest) { Set(dest); }
+    explicit CGlobeAddress(const CTxDestination &dest, bool bech32) { Set(dest, bech32); }
+    explicit CGlobeAddress(const std::string& strAddress) { SetString(strAddress); }
+    explicit CGlobeAddress(const char* pszAddress) { SetString(pszAddress); }
 
     CTxDestination Get() const;
     CTxDestination GetStakeOnly() const;
@@ -127,7 +127,7 @@ public:
 /**
  * A base58-encoded secret key
  */
-class CBitcoinSecret : public CBase58Data
+class CGlobeSecret : public CBase58Data
 {
 public:
     void SetKey(const CKey& vchSecret);
@@ -136,11 +136,11 @@ public:
     bool SetString(const char* pszSecret);
     bool SetString(const std::string& strSecret);
 
-    explicit CBitcoinSecret(const CKey& vchSecret) { SetKey(vchSecret); }
-    CBitcoinSecret() {}
+    explicit CGlobeSecret(const CKey& vchSecret) { SetKey(vchSecret); }
+    CGlobeSecret() {}
 };
 
-template<typename K, int Size, CChainParams::Base58Type Type> class CBitcoinExtKeyBase : public CBase58Data
+template<typename K, int Size, CChainParams::Base58Type Type> class CGlobeExtKeyBase : public CBase58Data
 {
 public:
     void SetKey(const K &key) {
@@ -177,19 +177,19 @@ public:
         return ret;
     }
 
-    explicit CBitcoinExtKeyBase(const K &key) {
+    explicit CGlobeExtKeyBase(const K &key) {
         SetKey(key);
     }
 
-    explicit CBitcoinExtKeyBase(const std::string& strBase58c) {
+    explicit CGlobeExtKeyBase(const std::string& strBase58c) {
         SetString(strBase58c.c_str(), Params().Base58Prefix(Type).size());
     }
 
-    CBitcoinExtKeyBase() {}
+    CGlobeExtKeyBase() {}
 };
 
-typedef CBitcoinExtKeyBase<CExtKey, BIP32_EXTKEY_SIZE, CChainParams::EXT_SECRET_KEY> CBitcoinExtKey;
-typedef CBitcoinExtKeyBase<CExtPubKey, BIP32_EXTKEY_SIZE, CChainParams::EXT_PUBLIC_KEY> CBitcoinExtPubKey;
+typedef CGlobeExtKeyBase<CExtKey, BIP32_EXTKEY_SIZE, CChainParams::EXT_SECRET_KEY> CGlobeExtKey;
+typedef CGlobeExtKeyBase<CExtPubKey, BIP32_EXTKEY_SIZE, CChainParams::EXT_PUBLIC_KEY> CGlobeExtPubKey;
 
 
 class CExtKey58 : public CBase58Data
@@ -269,4 +269,4 @@ public:
     std::string ToStringVersion(CChainParams::Base58Type prefix);
 };
 
-#endif // BITCOIN_KEY_IO_H
+#endif // GLOBE_KEY_IO_H

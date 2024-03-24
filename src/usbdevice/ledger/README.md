@@ -1,7 +1,7 @@
 btchip-c-api
 ============
 
-C APIs demonstrating how to use the latest BTChip firmware published on http://btchip.github.io/btchip-doc/bitcoin-technical.html
+C APIs demonstrating how to use the latest BTChip firmware published on http://btchip.github.io/btchip-doc/globe-technical.html
 
 Note : if you're using an older firmware version (before 1.4.7), check the derive-before-1.4.7 branch
 
@@ -255,8 +255,8 @@ Run with the following parameters :
 
   * Operation mode flags combined with + (WALLET|RELAXED|SERVER|DEVELOPER)]
   * Features flag combined with + (UNCOMPRESSED_KEYS|RFC6979|FREE_SIGHASHTYPE|NO_2FA_P2SH)
-  * hex key version (1 byte or empty for bitcoin mainnet)
-  * hex key version P2SH (1 byte or empty for bitcoin mainnet)
+  * hex key version (1 byte or empty for globe mainnet)
+  * hex key version P2SH (1 byte or empty for globe mainnet)
   * hex user pin (min 4 bytes)
   * hex wipe pin (or empty)
   * keymap encoding (QWERTY or AZERTY or 119 bytes)
@@ -279,8 +279,8 @@ Run with the following parameters :
 
   * Operation mode flags combined with + (WALLET|RELAXED|SERVER|DEVELOPER)]
   * Features flag combined with + (UNCOMPRESSED_KEYS|RFC6979|FREE_SIGHASHTYPE|NO_2FA_P2SH)
-  * hex key version (1 byte or empty for bitcoin mainnet)
-  * hex key version P2SH (1 byte or empty for bitcoin mainnet)
+  * hex key version (1 byte or empty for globe mainnet)
+  * hex key version P2SH (1 byte or empty for globe mainnet)
   * hex user pin (min 4 bytes)
   * hex wipe pin (or empty)
   * keymap encoding (QWERTY or AZERTY or 119 bytes)
@@ -301,8 +301,8 @@ Run with the following parameters :
 
   * Operation mode flags combined with + (WALLET|RELAXED|SERVER|DEVELOPER)]
   * Features flag combined with + (UNCOMPRESSED_KEYS|RFC6979|FREE_SIGHASHTYPE|NO_2FA_P2SH)
-  * hex key version (1 byte or empty for bitcoin mainnet)
-  * hex key version P2SH (1 byte or empty for bitcoin mainnet)
+  * hex key version (1 byte or empty for globe mainnet)
+  * hex key version P2SH (1 byte or empty for globe mainnet)
   * hex end user public key
   * hex end user password blob
   * user entropy (32 bytes)

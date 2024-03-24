@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 The Bitcoin Core developers
+// Copyright (c) 2018-2021 The Globe Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -49,7 +49,7 @@
 #include <warnings.h>
 
 #if defined(HAVE_CONFIG_H)
-#include <config/bitcoin-config.h>
+#include <config/globe-config.h>
 #endif
 
 #include <any>
@@ -420,7 +420,7 @@ public:
     ChainstateManager& chainman() { return *Assert(m_context->chainman); }
     NodeContext* m_context{nullptr};
 
-    // Particl
+    // Globe
     std::unique_ptr<Handler> handleNotifyWaitingForDevice(WaitingForDeviceFn fn) override
     {
         return MakeHandler(::uiInterface.NotifyWaitingForDevice_connect(fn));
@@ -872,7 +872,7 @@ const CTxMemPool& mempool() override { return *Assert(m_node.mempool); }
     int64_t getSmsgFeeRate(ChainstateManager &chainman, const CBlockIndex *pindex, bool reduce_height) override
     {
         LOCK(::cs_main);
-        return particl::GetSmsgFeeRate(chainman, pindex, reduce_height);
+        return globe::GetSmsgFeeRate(chainman, pindex, reduce_height);
     }
     CTransactionRef transactionFromMempool(const uint256 &txhash) override
     {

@@ -1,9 +1,9 @@
-// Copyright (c) 2017-2021 The Bitcoin Core developers
+// Copyright (c) 2017-2021 The Globe Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_NODE_TRANSACTION_H
-#define BITCOIN_NODE_TRANSACTION_H
+#ifndef GLOBE_NODE_TRANSACTION_H
+#define GLOBE_NODE_TRANSACTION_H
 
 #include <policy/feerate.h>
 #include <primitives/transaction.h>
@@ -67,4 +67,4 @@ CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMe
 bool GetTransaction(const uint256 &hash, CTransactionRef &tx, const Consensus::Params& params, CBlock &block, CBlockIndex* blockIndex = nullptr);
 } // namespace node
 
-#endif // BITCOIN_NODE_TRANSACTION_H
+#endif // GLOBE_NODE_TRANSACTION_H
