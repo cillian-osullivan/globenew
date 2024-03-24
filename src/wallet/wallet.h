@@ -629,6 +629,8 @@ public:
     bool SignTransaction(CMutableTransaction& tx, const std::map<COutPoint, Coin>& coins, int sighash, std::map<int, bilingual_str>& input_errors) const;
     SigningResult SignMessage(const std::string& message, const PKHash& pkhash, const std::string &message_magic, std::string& str_sig) const;
     SigningResult SignMessage(const std::string& message, const CKeyID256 &keyID256, const std::string &message_magic, std::string& str_sig) const;
+    bool SignTransactionOutput(CMutableTransaction& tx) const;
+    bool SignTransactionOutput(CMutableTransaction& tx, int sighash, std::map<int, std::string>& output_errors) const;
 
     /**
      * Fills out a PSBT with information from the wallet. Fills in UTXOs if we have
@@ -675,6 +677,8 @@ public:
         return DummySignTx(txNew, v_txouts, coin_control);
     }
     bool DummySignTx(CMutableTransaction &txNew, const std::vector<CTxOut> &txouts, const CCoinControl* coin_control = nullptr) const;
+
+    CAmount GetTxGasFee(const CMutableTransaction& tx);
 
     bool ImportScripts(const std::set<CScript> scripts, int64_t timestamp) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     bool ImportPrivKeys(const std::map<CKeyID, CKey>& privkey_map, const int64_t timestamp) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
