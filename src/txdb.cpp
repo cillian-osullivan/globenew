@@ -499,6 +499,8 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nNonce         = diskindex.nNonce;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
+                pindexNew->hashStateRoot  = diskindex.hashStateRoot; // globe
+                pindexNew->hashUTXORoot   = diskindex.hashUTXORoot; // globe
 
                 pindexNew->hashWitnessMerkleRoot    = diskindex.hashWitnessMerkleRoot;
                 pindexNew->nFlags                   = diskindex.nFlags & (uint32_t)~BLOCK_DELAYED;
@@ -534,6 +536,14 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
 
     return true;
 }
+
+bool CBlockTreeDB::EraseBlockIndex(const std::vector<uint256> &vect)
+ {
+     CDBBatch batch(*this);
+     for (std::vector<uint256>::const_iterator it=vect.begin(); it!=vect.end(); it++)
+         batch.Erase(std::make_pair(DB_BLOCK_INDEX, *it));
+     return WriteBatch(batch);
+ }
 
 size_t CBlockTreeDB::CountBlockIndex()
 {
