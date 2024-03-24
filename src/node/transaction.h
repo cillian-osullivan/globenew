@@ -16,6 +16,7 @@ class CBlock;
 namespace Consensus {
 struct Params;
 }
+class Chainstate;
 
 namespace node {
 struct NodeContext;
@@ -25,7 +26,7 @@ struct NodeContext;
  * By default, a transaction with a fee rate higher than this will be rejected
  * by these RPCs and the GUI. This can be overridden with the maxfeerate argument.
  */
-static const CFeeRate DEFAULT_MAX_RAW_TX_FEE_RATE{COIN / 2};
+static const CFeeRate DEFAULT_MAX_RAW_TX_FEE_RATE{1 * COIN};
 static const CFeeRate DEFAULT_MAX_RAW_TX_FEE_RATE_BTC{COIN / 10};
 
 /**
@@ -60,7 +61,7 @@ static const CFeeRate DEFAULT_MAX_RAW_TX_FEE_RATE_BTC{COIN / 10};
  * @param[out] hashBlock       The block hash, if the tx was found via -txindex or block_index
  * @returns                    The tx if found, otherwise nullptr
  */
-CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* const mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock);
+CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* const mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock, Chainstate* chainstate = nullptr);
 
 /** Retrieve a transaction and block header from disk */
 bool GetTransaction(const uint256 &hash, CTransactionRef &tx, const Consensus::Params& params, CBlock &block, CBlockIndex* blockIndex = nullptr);
