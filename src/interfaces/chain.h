@@ -7,6 +7,7 @@
 
 #include <primitives/transaction.h> // For CTransactionRef
 #include <util/settings.h>          // For util::SettingsValue
+#include <netbase.h> // For ConnectionDirection
 
 #include <functional>
 #include <memory>
@@ -15,6 +16,11 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <map>
+
+#if defined(HAVE_CONFIG_H)
+#include <config/globe-config.h>
+#endif
 
 class ArgsManager;
 class CBlock;
@@ -40,6 +46,17 @@ class CBlockIndex;
 class CCmpPubKey;
 class CAnonOutput;
 class CAnonKeyImageInfo;
+
+class ChainstateManager;
+class CTxMemPool;
+class CBlockIndex;
+class CCoinsViewCache;
+
+#ifdef ENABLE_WALLET
+namespace wallet {
+class CWallet;
+} // namespace wallet
+#endif
 
 namespace interfaces {
 
@@ -126,6 +143,12 @@ class Chain
 {
 public:
     virtual ~Chain() {}
+
+    //! Get chain state manager
+    virtual ChainstateManager& chainman() = 0;
+
+    //! Get mempool
+    virtual const CTxMemPool& mempool() = 0;
 
     //! Get current chain height, not including genesis block (returns 0 if
     //! chain only contains genesis block, nullopt if chain does not contain
@@ -331,6 +354,20 @@ public:
     //! Get internal node context. Useful for testing, but not
     //! accessible across processes.
     virtual node::NodeContext* context() { return nullptr; }
+
+    //! Get number of connections.
+    virtual size_t getNodeCount(ConnectionDirection flags) = 0;
+
+    //! Get transaction gas fee.
+    virtual CAmount getTxGasFee(const CMutableTransaction& tx) = 0;
+
+#ifdef ENABLE_WALLET
+    //! get contract RPC commands.
+    virtual Span<const CRPCCommand> getContractRPCCommands() = 0;
+
+    //! get mining RPC commands.
+    virtual Span<const CRPCCommand> getMiningRPCCommands() = 0;
+#endif
 
     //! Particl Specific
     virtual int getHeightInt() = 0;
