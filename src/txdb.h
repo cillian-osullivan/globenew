@@ -32,6 +32,7 @@ namespace Consensus {
 struct Params;
 };
 struct bilingual_str;
+using valtype = std::vector<unsigned char>;
 
 const char DB_RCTOUTPUT = 'A';
 const char DB_RCTOUTPUT_LINK = 'L';
@@ -142,6 +143,8 @@ public:
     bool EraseSpentCache(const COutPoint &outpoint);
 
     //bool WriteRCTOutputBatch(std::vector<std::pair<int64_t, CAnonOutput> > &vao);
+
+    bool EraseBlockIndex(const std::vector<uint256>&vect);
 };
 
 std::optional<bilingual_str> CheckLegacyTxindex(CBlockTreeDB& block_tree_db);
