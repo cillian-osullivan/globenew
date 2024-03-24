@@ -36,6 +36,7 @@
 #include <shutdown.h>
 #include <support/allocators/secure.h>
 #include <sync.h>
+#include <timedata.h>
 #include <txmempool.h>
 #include <uint256.h>
 #include <univalue.h>
@@ -293,6 +294,7 @@ public:
     bool isInitialBlockDownload() override {
         return chainman().ActiveChainstate().IsInitialBlockDownload();
     }
+    bool isAddressTypeSet() override { return !::gArgs.GetArg("-addresstype", "").empty(); }
     bool getReindex() override { return node::fReindex; }
     bool getImporting() override { return node::fImporting; }
     void setNetworkActive(bool active) override
@@ -331,6 +333,34 @@ public:
     WalletLoader& walletLoader() override
     {
         return *Assert(m_context->wallet_loader);
+    }
+    void getGasInfo(uint64_t& blockGasLimit, uint64_t& minGasPrice, uint64_t& nGasPrice) override
+    {
+    }
+    void getSyncInfo(int& numBlocks, bool& isSyncing) override
+    {
+        LOCK(::cs_main);
+        // Get node synchronization information with minimal locks
+        numBlocks = chainman().ActiveChain().Height();
+        int64_t blockTime = chainman().ActiveChain().Tip() ? chainman().ActiveChain().Tip()->GetBlockTime() :
+                                                  Params().GenesisBlock().GetBlockTime();
+        int64_t secs = GetTime() - blockTime;
+        isSyncing = secs >= 90*60 ? true : false;
+    }
+    bool tryGetSyncInfo(int& numBlocks, bool& isSyncing) override
+    {
+        TRY_LOCK(::cs_main, lockMain);
+        if (lockMain) {
+            // Get node synchronization information with minimal locks
+            numBlocks = chainman().ActiveChain().Height();
+            int64_t blockTime = chainman().ActiveChain().Tip() ? chainman().ActiveChain().Tip()->GetBlockTime() :
+                                                      Params().GenesisBlock().GetBlockTime();
+            int64_t secs = GetTime() - blockTime;
+            isSyncing = secs >= 90*60 ? true : false;
+            return true;
+        }
+
+        return false;
     }
     std::unique_ptr<Handler> handleInitMessage(InitMessageFn fn) override
     {
@@ -716,6 +746,8 @@ public:
         LOCK(::cs_main);
         return chainman().m_blockman.m_have_pruned;
     }
+    bool getReindex() override { return node::fReindex; }
+    bool getImporting() override { return node::fImporting; }
     bool isReadyToBroadcast() override { return !node::fImporting && !node::fReindex && !isInitialBlockDownload(); }
     bool isInitialBlockDownload() override {
         return chainman().ActiveChainstate().IsInitialBlockDownload();
@@ -791,6 +823,38 @@ public:
 
     NodeContext* context() override { return &m_node; }
     ChainstateManager& chainman() { return *Assert(m_node.chainman); }
+
+const CTxMemPool& mempool() override { return *Assert(m_node.mempool); }
+
+     bool getUnspentOutput(const COutPoint& output, Coin& coin) override
+     {
+         LOCK(::cs_main);
+         return chainman().ActiveChainstate().CoinsTip().GetCoin(output, coin);
+     }
+     CCoinsViewCache& getCoinsTip() override
+     {
+         LOCK(::cs_main);
+         return chainman().ActiveChainstate().CoinsTip();
+     }
+     size_t getNodeCount(ConnectionDirection flags) override
+     {
+         return Assert(m_node.connman) ? m_node.connman->GetNodeCount(flags) : 0;
+     }
+     CAmount getTxGasFee(const CMutableTransaction& tx) override
+     {
+         return {};
+     }
+ #ifdef ENABLE_WALLET
+     Span<const CRPCCommand> getContractRPCCommands() override
+     {
+         return {};
+     }
+     Span<const CRPCCommand> getMiningRPCCommands() override
+     {
+         return {};
+     }
+ #endif
+
     NodeContext& m_node;
 
     int getHeightInt() override
