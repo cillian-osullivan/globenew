@@ -1199,10 +1199,67 @@ const std::shared_ptr<const CWallet> pwallet = GetWalletForJSONRPCRequest(reques
     }
 
     bool verbose = request.params[2].isNull() ? false : request.params[2].get_bool();
+    {
+        LOCK(pwallet->cs_wallet);
+        auto it = pwallet->mapWallet.find(hash);
+        if (it == pwallet->mapWallet.end()) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id");
+        }
+    }
 
-    UniValue entry(UniValue::VOBJ);
+
+    int waitconf = 0;
+    if(!request.params[3].isNull()) {
+        waitconf = request.params[3].getInt<int>();
+    }
+
+    bool shouldWaitConf = !request.params[3].isNull() && waitconf > 0;
+
+    {
+        LOCK(pwallet->cs_wallet);
+        auto it = pwallet->mapWallet.find(hash);
+        if (it == pwallet->mapWallet.end()) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id");
+        }
+    }
+
+    const CWalletTx* _wtx = nullptr;
+
+    // avoid long-poll if API caller does not specify waitconf
+    if (!shouldWaitConf) {
+        {
+            LOCK(pwallet->cs_wallet);
+            _wtx = &pwallet->mapWallet.at(hash);
+        }
+
+    } else {
+        if(!request.httpreq)
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "No HTTP connection. Waitconf is available from qtum-cli, not qtum-qt");
+
+        request.PollStart();
+        while (true) {
+            {
+                LOCK(pwallet->cs_wallet);
+                _wtx = &pwallet->mapWallet.at(hash);
+
+                if (pwallet->GetTxDepthInMainChain(*_wtx) >= waitconf) {
+                    break;
+                }
+            }
+
+            request.PollPing();
+
+            std::unique_lock<std::mutex> lock(cs_blockchange);
+            cond_blockchange.wait_for(lock, std::chrono::milliseconds(300));
+
+            if (!request.PollAlive() || !IsRPCRunning()) {
+                return NullUniValue;
+            }
+        }
+
+    /*UniValue entry(UniValue::VOBJ);
     auto it = pwallet->mapWallet.find(hash);
-    if (it == pwallet->mapWallet.end()) {
+    if (it == pwallet->mapWallet.end()) {*/
         if (IsGlobeWallet(pwallet.get())) {
             const CHDWallet *phdw = GetGlobeWallet(pwallet.get());
             LOCK_ASSERTION(phdw->cs_wallet);
@@ -1214,10 +1271,13 @@ const std::shared_ptr<const CWallet> pwallet = GetWalletForJSONRPCRequest(reques
                 return entry;
             }
         }
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id");
+        //throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id");
     }
-    const CWalletTx& wtx = it->second;
 
+    LOCK(pwallet->cs_wallet);
+    const CWalletTx& wtx = *_wtx;
+
+    UniValue entry(UniValue::VOBJ);
     CAmount nCredit = CachedTxGetCredit(*pwallet, wtx, filter);
     CAmount nDebit = CachedTxGetDebit(*pwallet, wtx, filter);
     CAmount nNet = nCredit - nDebit;

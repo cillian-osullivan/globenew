@@ -21,7 +21,7 @@
 #include <util/strencodings.h>
 #include <util/translation.h>
 
-CMutableTransaction ConstructTransaction(const UniValue& inputs_in, const UniValue& outputs_in, const UniValue& locktime, std::optional<bool> rbf)
+CMutableTransaction ConstructTransaction(const UniValue& inputs_in, const UniValue& outputs_in, const UniValue& locktime, std::optional<bool> rbf, IRawContract* rawContract)
 {
     if (outputs_in.isNull()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, output argument must be non-null");
@@ -107,6 +107,7 @@ CMutableTransaction ConstructTransaction(const UniValue& inputs_in, const UniVal
     std::set<CTxDestination> destinations;
     bool has_data{false};
 
+    int i = 0;
     for (const std::string& name_ : outputs.getKeys()) {
         if (name_ == "data") {
             if (has_data) {
@@ -125,6 +126,10 @@ CMutableTransaction ConstructTransaction(const UniValue& inputs_in, const UniVal
                 CTxOut out(0, CScript() << OP_RETURN << data);
                 rawTx.vout.push_back(out);
             };
+        } else if (rawContract && name_ == "contract") {
+            // Get the contract object
+            UniValue contract = outputs[i];
+            rawContract->addContract(rawTx, contract);
         } else {
             CTxDestination destination = DecodeDestination(name_);
             if (!IsValidDestination(destination)) {
@@ -160,6 +165,7 @@ CMutableTransaction ConstructTransaction(const UniValue& inputs_in, const UniVal
                 CTxOut out(nAmount, scriptPubKey);
                 rawTx.vout.push_back(out);
             }
+	    ++i;
         }
     }
 

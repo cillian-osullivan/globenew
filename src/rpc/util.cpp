@@ -19,7 +19,17 @@
 
 const std::string UNIX_EPOCH_TIME = "UNIX epoch time";
 const std::string EXAMPLE_ADDRESS_BTC[2] = {"bc1q09vm5lfy0j5reeulh4x5752q25uqqvz34hufdl", "bc1q02ad21edsxd23d32dfgqqsz4vv4nmtfzuklhy3"};
-const std::string EXAMPLE_ADDRESS_PART[2] = {"PswXnoragjpAtaySWkPSmWQe3Fc8LmviVc", "Pka9M2Bva8WetQhQ4ngC255HAbMJf5P5Dc"};
+const std::string EXAMPLE_ADDRESS_PART[2] = {"GswXnoragjpAtaySWkPSmWQe3Fc8LmviVc", "Gka9M2Bva8WetQhQ4ngC255HAbMJf5P5Dc"};
+
+GlobalMutex cs_blockchange;
+std::condition_variable cond_blockchange;
+CUpdatedBlock latestblock GUARDED_BY(cs_blockchange);
+std::atomic<bool> g_rpc_running{false};
+
+bool IsRPCRunning()
+{
+    return g_rpc_running;
+}
 
 std::string GetAllOutputTypes()
 {

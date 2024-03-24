@@ -64,15 +64,15 @@ using node::ReadBlockFromDisk;
 using node::SnapshotMetadata;
 using node::UndoReadFromDisk;
 
-struct CUpdatedBlock
-{
-    uint256 hash;
-    int height;
-};
+//struct CUpdatedBlock
+//{
+//    uint256 hash;
+//    int height;
+//};
 
-static GlobalMutex cs_blockchange;
-static std::condition_variable cond_blockchange;
-static CUpdatedBlock latestblock GUARDED_BY(cs_blockchange);
+//static GlobalMutex cs_blockchange;
+//static std::condition_variable cond_blockchange;
+//static CUpdatedBlock latestblock GUARDED_BY(cs_blockchange);
 
 /* Calculate the difficulty for a given block index.
  */
