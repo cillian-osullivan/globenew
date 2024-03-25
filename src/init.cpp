@@ -512,6 +512,7 @@ void SetupServerArgs(ArgsManager& argsman)
         "-choosedatadir", "-lang=<lang>", "-min", "-resetguisettings", "-splash", "-uiplatform"};
 
     argsman.AddArg("-version", "Print version and exit", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-record-log-opcodes", "Logs all EVM LOG opcode operations to the file vmExecLogs.json", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
 #if HAVE_SYSTEM
     argsman.AddArg("-alertnotify=<cmd>", "Execute command when an alert is raised (%s in cmd is replaced by message)", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
 #endif
@@ -588,6 +589,11 @@ void SetupServerArgs(ArgsManager& argsman)
     hidden_args.emplace_back("-debugdevice");  // Disable to allow usbdevices in regtest mode
     // end Globe specific
 
+    argsman.AddArg("-logevents", strprintf("Maintain a full EVM log index, used by searchlogs and gettransactionreceipt rpc calls (default: %u)", DEFAULT_LOGEVENTS), ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-addrindex", strprintf("Maintain a full address index (default: %u)", DEFAULT_ADDRINDEX), ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-deleteblockchaindata", "Delete the local copy of the block chain data", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-forceinitialblocksdownloadmode", strprintf("Force initial blocks download mode for the node (default: %u)", DEFAULT_FORCE_INITIAL_BLOCKS_DOWNLOAD_MODE), ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+
     argsman.AddArg("-addnode=<ip>", strprintf("Add a node to connect to and attempt to keep the connection open (see the addnode RPC help for more info). This option can be specified multiple times to add multiple nodes; connections are limited to %u at a time and are counted separately from the -maxconnections limit.", MAX_ADDNODE_CONNECTIONS), ArgsManager::ALLOW_ANY | ArgsManager::NETWORK_ONLY, OptionsCategory::CONNECTION);
     argsman.AddArg("-asmap=<file>", strprintf("Specify asn mapping used for bucketing of the peers (default: %s). Relative paths will be prefixed by the net-specific datadir location.", DEFAULT_ASMAP_FILENAME), ArgsManager::ALLOW_ANY, OptionsCategory::CONNECTION);
     argsman.AddArg("-bantime=<n>", strprintf("Default duration (in seconds) of manually configured bans (default: %u)", DEFAULT_MISBEHAVING_BANTIME), ArgsManager::ALLOW_ANY, OptionsCategory::CONNECTION);
@@ -624,6 +630,9 @@ void SetupServerArgs(ArgsManager& argsman)
     argsman.AddArg("-peertimeout=<n>", strprintf("Specify a p2p connection timeout delay in seconds. After connecting to a peer, wait this amount of time before considering disconnection based on inactivity (minimum: 1, default: %d)", DEFAULT_PEER_CONNECT_TIMEOUT), ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::CONNECTION);
     argsman.AddArg("-torcontrol=<ip>:<port>", strprintf("Tor control port to use if onion listening enabled (default: %s)", DEFAULT_TOR_CONTROL), ArgsManager::ALLOW_ANY, OptionsCategory::CONNECTION);
     argsman.AddArg("-torpassword=<pass>", "Tor control port password (default: empty)", ArgsManager::ALLOW_ANY | ArgsManager::SENSITIVE, OptionsCategory::CONNECTION);
+    argsman.AddArg("-dgpstorage", "Receiving data from DGP via storage (default: -dgpevm)", ArgsManager::ALLOW_ANY, OptionsCategory::CONNECTION);
+    argsman.AddArg("-dgpevm", "Receiving data from DGP via a contract call (default: -dgpevm)", ArgsManager::ALLOW_ANY, OptionsCategory::CONNECTION);
+    argsman.AddArg("-hwitoolpath=<path>", "Specify HWI tool path", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
 #ifdef USE_UPNP
 #if USE_UPNP
     argsman.AddArg("-upnp", "Use UPnP to map the listening port (default: 1 when listening and no -proxy)", ArgsManager::ALLOW_ANY, OptionsCategory::CONNECTION);
@@ -708,12 +717,21 @@ void SetupServerArgs(ArgsManager& argsman)
     argsman.AddArg("-limitdescendantsize=<n>", strprintf("Do not accept transactions if any ancestor would have more than <n> kilobytes of in-mempool descendants (default: %u).", DEFAULT_DESCENDANT_SIZE_LIMIT_KVB), ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-addrmantest", "Allows to test address relay on localhost", ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-capturemessages", "Capture all P2P messages to disk", ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::DEBUG_TEST);
+    argsman.AddArg("-showevmlogs", strprintf("Print evm logs to console (default: %u)", DEFAULT_SHOWEVMLOGS), ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-mocktime=<n>", "Replace actual time with " + UNIX_EPOCH_TIME + " (default: 0)", ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-maxsigcachesize=<n>", strprintf("Limit sum of signature cache and script execution cache sizes to <n> MiB (default: %u)", DEFAULT_MAX_SIG_CACHE_BYTES >> 20), ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-maxtipage=<n>", strprintf("Maximum tip age in seconds to consider node in initial block download (default: %u)", DEFAULT_MAX_TIP_AGE), ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::DEBUG_TEST);
+    argsman.AddArg("-minmempoolgaslimit=<limit>", strprintf("The minimum transaction gas limit we are willing to accept into the mempool (default: %s)",MEMPOOL_MIN_GAS_LIMIT), ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-printpriority", strprintf("Log transaction fee rate in " + CURRENCY_UNIT + "/kvB when mining blocks (default: %u)", DEFAULT_PRINTPRIORITY), ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-uacomment=<cmt>", "Append comment to the user agent string", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
 
+    argsman.AddArg("-opsenderheight=<n>", "Use given block height to check opsender fork (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
+    argsman.AddArg("-btcecrecoverheight=<n>", "Use given block height to check btc_ecrecover fork (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
+    argsman.AddArg("-constantinopleheight=<n>", "Use given block height to check constantinople fork (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
+    argsman.AddArg("-muirglacierheight=<n>", "Use given block height to check contracts with EVM Muir Glacier (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
+    argsman.AddArg("-londonheight=<n>", "Use given block height to check contracts with EVM London (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
+    argsman.AddArg("-taprootheight=<n>", "Use given block height to check taproot (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
+    
     SetupChainParamsBaseOptions(argsman);
 
     argsman.AddArg("-acceptnonstdtxn", strprintf("Relay and mine \"non-standard\" transactions (%sdefault: %u)", "testnet/regtest only; ", !testnetChainParams->RequireStandard()), ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::NODE_RELAY);
@@ -760,6 +778,13 @@ void SetupServerArgs(ArgsManager& argsman)
     hidden_args.emplace_back("-daemonwait");
 #endif
 
+    argsman.AddArg("-headerspamfilter=<n>", strprintf("Use header spam filter (default: %u)", DEFAULT_HEADER_SPAM_FILTER), ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-headerspamfiltermaxsize=<n>", strprintf("Maximum size of the list of indexes in the header spam filter (default: %u)", DEFAULT_HEADER_SPAM_FILTER_MAX_SIZE), ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-headerspamfiltermaxavg=<n>", strprintf("Maximum average size of an index occurrence in the header spam filter (default: %u)", DEFAULT_HEADER_SPAM_FILTER_MAX_AVG), ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-headerspamfilterignoreport=<n>", strprintf("Ignore the port in the ip address when looking for header spam, determine whether or not multiple nodes can be on the same IP (default: %u)", DEFAULT_HEADER_SPAM_FILTER_IGNORE_PORT), ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-cleanblockindex=<true/false>", "Clean block index (enabled by default)", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-cleanblockindextimeout=<n>", "Clean block index periodically after some time (default 600 seconds)", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+
 #if defined(USE_SYSCALL_SANDBOX)
     argsman.AddArg("-sandbox=<mode>", "Use the experimental syscall sandbox in the specified mode (-sandbox=log-and-abort or -sandbox=abort). Allow only expected syscalls to be used by globed. Note that this is an experimental new feature that may cause globed to exit or crash unexpectedly: use with caution. In the \"log-and-abort\" mode the invocation of an unexpected syscall results in a debug handler being invoked which will log the incident and terminate the program (without executing the unexpected syscall). In the \"abort\" mode the invocation of an unexpected syscall results in the entire process being killed immediately by the kernel without executing the unexpected syscall.", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
 #endif // USE_SYSCALL_SANDBOX
@@ -781,6 +806,19 @@ static void BlockNotifyGenesisWait(const CBlockIndex* pBlockIndex)
         }
         g_genesis_wait_cv.notify_all();
     }
+}
+
+// Delete local blockchain data
+void DeleteBlockChainData()
+{
+    // Delete block chain data paths
+    fs::path datadir = gArgs.GetDataDirNet();
+    fs::remove_all(datadir / "chainstate");
+    fs::remove_all(gArgs.GetBlocksDirPath());
+    fs::remove_all(datadir / "stateQtum");
+    fs::remove(datadir / "banlist.dat");
+    fs::remove(datadir / "fee_estimates.dat");
+    fs::remove(datadir / "mempool.dat");
 }
 
 #if HAVE_SYSTEM
@@ -1228,17 +1266,115 @@ bool AppInitParameterInteraction(const ArgsManager& args, bool use_syscall_sandb
     }
 #endif // USE_SYSCALL_SANDBOX
 
+    if (args.IsArgSet("-opsenderheight")) {
+        // Allow overriding opsender block for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError(Untranslated("Op Sender block height may only be overridden on regtest."));
+        }
+
+        int opsenderBlock = args.GetIntArg("-opsenderheight", 0);
+        if(opsenderBlock >= 0)
+        {
+            UpdateOpSenderBlockHeight(opsenderBlock);
+            LogPrintf("Activate Op Sender at block height %d\n.", opsenderBlock);
+        }
+    }
+
+    if (args.IsArgSet("-btcecrecoverheight")) {
+        // Allow overriding btc_ecrecover block for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError(Untranslated("Btc_ecrecover block height may only be overridden on regtest."));
+        }
+
+        int btcEcrecoverBlock = args.GetIntArg("-btcecrecoverheight", 0);
+        if(btcEcrecoverBlock >= 0)
+        {
+            UpdateBtcEcrecoverBlockHeight(btcEcrecoverBlock);
+            LogPrintf("Activate btc_ecrecover at block height %d\n.", btcEcrecoverBlock);
+        }
+    }
+
+    if (args.IsArgSet("-constantinopleheight")) {
+        // Allow overriding constantinople block for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError(Untranslated("Constantinople block height may only be overridden on regtest."));
+        }
+
+        int constantinopleBlock = args.GetIntArg("-constantinopleheight", 0);
+        if(constantinopleBlock >= 0)
+        {
+            UpdateConstantinopleBlockHeight(constantinopleBlock);
+            LogPrintf("Activate constantinople at block height %d\n.", constantinopleBlock);
+        }
+    }
+
+    if (args.IsArgSet("-reduceblocktimeheight")) {
+        // Allow overriding short block time block height for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError(Untranslated("Short block time height may only be overridden on regtest."));
+        }
+
+        int reduceblocktimeheight = args.GetIntArg("-reduceblocktimeheight", 0);
+        if(reduceblocktimeheight >= 0)
+        {
+            UpdateReduceBlocktimeHeight(reduceblocktimeheight);
+            LogPrintf("Activate short block time at block height %d\n.", reduceblocktimeheight);
+        }
+    }
+
+    if (args.IsArgSet("-muirglacierheight")) {
+        // Allow overriding EVM Muir Glacier block height for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError(Untranslated("Short EVM Muir Glacier height may only be overridden on regtest."));
+        }
+
+        int muirglacierheight = args.GetIntArg("-muirglacierheight", 0);
+        if(muirglacierheight >= 0)
+        {
+            UpdateMuirGlacierHeight(muirglacierheight);
+            LogPrintf("Activate EVM Muir Glacier at block height %d\n.", muirglacierheight);
+        }
+    }
+
+    if (args.IsArgSet("-londonheight")) {
+        // Allow overriding EVM London block height for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError(Untranslated("Short EVM London height may only be overridden on regtest."));
+        }
+
+        int londonheight = args.GetIntArg("-londonheight", 0);
+        if(londonheight >= 0)
+        {
+            UpdateLondonHeight(londonheight);
+            LogPrintf("Activate EVM London at block height %d\n.", londonheight);
+        }
+    }
+
+    if (args.IsArgSet("-taprootheight")) {
+        // Allow overriding taproot block height for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError(Untranslated("Taproot height may only be overridden on regtest."));
+        }
+
+        int taprootheight = args.GetIntArg("-taprootheight", 0);
+        if(taprootheight >= 0)
+        {
+            UpdateTaprootHeight(taprootheight);
+            LogPrintf("Activate taproot at block height %d\n.", taprootheight);
+        }
+    }
+
     return true;
 }
 
-static bool LockDataDirectory(bool probeOnly)
+static bool LockDataDirectory(bool probeOnly, bool try_lock = true)
 {
     // Make sure only a single Globe process is using the data directory.
     const fs::path& datadir = gArgs.GetDataDirNet();
     if (!DirIsWritable(datadir)) {
         return InitError(strprintf(_("Cannot write to data directory '%s'; check permissions."), fs::PathToString(datadir)));
     }
-    if (!LockDirectory(datadir, ".lock", probeOnly)) {
+    if (!LockDirectory(datadir, ".lock", probeOnly, try_lock)) {
         return InitError(strprintf(_("Cannot obtain a lock on data directory %s. %s is probably already running."), fs::PathToString(datadir), PACKAGE_NAME));
     }
     return true;
@@ -1309,6 +1445,11 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                   "from a different location, it will be unable to locate the current data files. There could "
                   "also be data loss if globe is started while in a temporary directory.\n",
                   args.GetArg("-datadir", ""), fs::PathToString(fs::current_path()));
+    }
+
+    if(args.GetBoolArg("-deleteblockchaindata", false))
+    {
+        DeleteBlockChainData();
     }
 
     ValidationCacheSizes validation_cache_sizes{};
@@ -1830,6 +1971,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         ThreadImport(chainman, vImportFiles, args, ShouldPersistMempool(args) ? MempoolPath(args) : fs::path{});
     });
 
+    node.peerman->InitCleanBlockIndex();
+
     // Wait for genesis block to be processed
     {
         WAIT_LOCK(g_genesis_wait_mutex, lock);
@@ -2070,4 +2213,10 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 #endif
 
     return true;
+}
+
+void UnlockDataDirectory()
+{
+    // Unlock
+    LockDataDirectory(true, false);
 }
