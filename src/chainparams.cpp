@@ -1238,6 +1238,32 @@ CChainParams &RegtestParams()
     return *globalChainParams.get();
 };
 
+std::string CChainParams::EVMGenesisInfo() const
+{
+    dev::eth::EVMConsensus evmConsensus;
+    evmConsensus.QIP6Height = consensus.QIP6Height;
+    evmConsensus.QIP7Height = consensus.QIP7Height;
+    evmConsensus.nMuirGlacierHeight = consensus.nMuirGlacierHeight;
+    evmConsensus.nLondonHeight = consensus.nLondonHeight;
+    return dev::eth::genesisInfoQtum(GetEVMNetwork(), evmConsensus);
+}
+
+std::string CChainParams::EVMGenesisInfo(int nHeight) const
+{
+    dev::eth::EVMConsensus evmConsensus(nHeight);
+    return dev::eth::genesisInfoQtum(GetEVMNetwork(), evmConsensus);
+}
+
+std::string CChainParams::EVMGenesisInfo(const dev::eth::EVMConsensus& evmConsensus) const
+{
+    return dev::eth::genesisInfoQtum(GetEVMNetwork(), evmConsensus);
+}
+
+dev::eth::Network CChainParams::GetEVMNetwork() const
+{
+    return dev::eth::Network::qtumNetwork;
+}
+
 void CChainParams::UpdateOpSenderBlockHeight(int nHeight)
 {
     consensus.QIP5Height = nHeight;
