@@ -43,6 +43,28 @@
 #include <utility>
 #include <vector>
 
+#include <consensus/consensus.h>
+
+/////////////////////////////////////////// globe
+#include <globe/globestate.h>
+#include <libethereum/ChainParams.h>
+#include <libethereum/LastBlockHashesFace.h>
+#include <libethashseal/GenesisInfo.h>
+#include <script/standard.h>
+#include <globe/storageresults.h>
+
+
+extern std::unique_ptr<GlobeState> globalState;
+extern std::shared_ptr<dev::eth::SealEngineFace> globalSealEngine;
+extern bool fRecordLogOpcodes;
+extern bool fIsVMlogFile;
+extern bool fGettingValuesDGP;
+
+struct EthTransactionParams;
+using valtype = std::vector<unsigned char>;
+using ExtractGlobeTX = std::pair<std::vector<GlobeTransaction>, std::vector<EthTransactionParams>>;
+///////////////////////////////////////////
+
 class Chainstate;
 class CBlockTreeDB;
 class CTxMemPool;
@@ -442,6 +464,8 @@ public:
         int nCheckLevel,
         int nCheckDepth) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 };
+
+extern std::unique_ptr<StorageResults> pstorageresult;
 
 enum DisconnectResult
 {
