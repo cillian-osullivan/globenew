@@ -51,7 +51,7 @@ enum eMemPoolFlags
 
 
 /** Fake height value used in Coin to signify they are only in the memory pool (since 0.8) */
-static const uint32_t MEMPOOL_HEIGHT = 0x7FFFFFFF;
+static const uint32_t MEMPOOL_HEIGHT = 0x0FFFFFFF;
 
 struct LockPoints {
     // Will be set to the blockchain height and median time past
@@ -84,6 +84,89 @@ struct CompareIteratorByHash {
         return a->GetTx().GetHash() < b->GetTx().GetHash();
     }
 };
+
+//////////////////////////////////////////////////////// // globe
+struct CSpentIndexKeyCompare
+{
+    bool operator()(const CSpentIndexKey& a, const CSpentIndexKey& b) const {
+        if (a.txid == b.txid) {
+            return a.outputIndex < b.outputIndex;
+        } else {
+            return a.txid < b.txid;
+        }
+    }
+};
+
+struct CMempoolAddressDelta
+{
+    int64_t time;
+    CAmount amount;
+    uint256 prevhash;
+    unsigned int prevout;
+
+    CMempoolAddressDelta(int64_t t, CAmount a, uint256 hash, unsigned int out) {
+        time = t;
+        amount = a;
+        prevhash = hash;
+        prevout = out;
+    }
+
+    CMempoolAddressDelta(int64_t t, CAmount a) {
+        time = t;
+        amount = a;
+        prevhash.SetNull();
+        prevout = 0;
+    }
+};
+
+struct CMempoolAddressDeltaKey
+{
+    int type;
+    uint256 addressBytes;
+    uint256 txhash;
+    unsigned int index;
+    int spending;
+
+    CMempoolAddressDeltaKey(int addressType, uint256 addressHash, uint256 hash, unsigned int i, int s) {
+        type = addressType;
+        addressBytes = addressHash;
+        txhash = hash;
+        index = i;
+        spending = s;
+    }
+
+    CMempoolAddressDeltaKey(int addressType, uint256 addressHash) {
+        type = addressType;
+        addressBytes = addressHash;
+        txhash.SetNull();
+        index = 0;
+        spending = 0;
+    }
+};
+
+struct CMempoolAddressDeltaKeyCompare
+{
+    bool operator()(const CMempoolAddressDeltaKey& a, const CMempoolAddressDeltaKey& b) const {
+        if (a.type == b.type) {
+            if (a.addressBytes == b.addressBytes) {
+                if (a.txhash == b.txhash) {
+                    if (a.index == b.index) {
+                        return a.spending < b.spending;
+                    } else {
+                        return a.index < b.index;
+                    }
+                } else {
+                    return a.txhash < b.txhash;
+                }
+            } else {
+                return a.addressBytes < b.addressBytes;
+            }
+        } else {
+            return a.type < b.type;
+        }
+    }
+};
+////////////////////////////////////////////////////////
 
 /** \class CTxMemPoolEntry
  *
@@ -118,6 +201,7 @@ private:
     const int64_t sigOpCost;        //!< Total sigop cost
     CAmount m_modified_fee;         //!< Used for determining the priority of the transaction for mining in a block
     LockPoints lockPoints;     //!< Track the height and time at which tx was final
+    CAmount nMinGasPrice{0}; //!< The minimum gas price among the contract outputs of the tx
 
     // Information about descendants of this transaction that are in the
     // mempool; if we remove this transaction we must remove all of these
@@ -136,7 +220,7 @@ public:
     CTxMemPoolEntry(const CTransactionRef& tx, CAmount fee,
                     int64_t time, unsigned int entry_height,
                     bool spends_coinbase,
-                    int64_t sigops_cost, LockPoints lp);
+                    int64_t sigops_cost, LockPoints lp, CAmount min_gas_price = 0);
 
     const CTransaction& GetTx() const { return *this->tx; }
     CTransactionRef GetSharedTx() const { return this->tx; }
@@ -149,6 +233,7 @@ public:
     CAmount GetModifiedFee() const { return m_modified_fee; }
     size_t DynamicMemoryUsage() const { return nUsageSize; }
     const LockPoints& GetLockPoints() const { return lockPoints; }
+    const CAmount& GetMinGasPrice() const { return nMinGasPrice; }
 
     // Adjusts the descendant state.
     void UpdateDescendantState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount);
@@ -326,11 +411,64 @@ public:
     }
 };
 
+class CompareTxMemPoolEntryByAncestorFeeOrGasPrice
+{
+public:
+    bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b) const
+    {
+        int fAHasCreateOrCall = a.GetTx().GetCreateOrCall();
+        int fBHasCreateOrCall = b.GetTx().GetCreateOrCall();
+
+        // If either of the two entries that we are comparing has a contract scriptPubKey, the comparison here takes precedence
+        if(fAHasCreateOrCall || fBHasCreateOrCall) {
+            // Prioritze non-contract txs
+            if((fAHasCreateOrCall > CTransaction::OpNone) != (fBHasCreateOrCall > CTransaction::OpNone)) {
+                return fAHasCreateOrCall > CTransaction::OpNone ? false : true;
+            }
+
+            // Prioritze create contract txs over send to contract txs
+            if((fAHasCreateOrCall > CTransaction::OpNone) && (fBHasCreateOrCall > CTransaction::OpNone) &&
+                    (fAHasCreateOrCall != fBHasCreateOrCall) && (fAHasCreateOrCall == CTransaction::OpCall || fBHasCreateOrCall == CTransaction::OpCall)){
+                return fAHasCreateOrCall == CTransaction::OpCall ? false : true;
+            }
+
+            // Prioritize the contract txs that have the least number of ancestors
+            // The reason for this is that otherwise it is possible to send one tx with a
+            // high gas limit but a low gas price which has a child with a low gas limit but a high gas price
+            // Without this condition that transaction chain would get priority in being included into the block.
+            if(a.GetCountWithAncestors() != b.GetCountWithAncestors()) {
+                return a.GetCountWithAncestors() < b.GetCountWithAncestors();
+            }
+
+            // Otherwise, prioritize the contract tx with the highest (minimum among its outputs) gas price
+            // The reason for using the gas price of the output that sets the minimum gas price is that there
+            // otherwise it may be possible to game the prioritization by setting a large gas price in one output
+            // that does no execution, while the real execution has a very low gas price
+            if(a.GetMinGasPrice() != b.GetMinGasPrice()) {
+                return a.GetMinGasPrice() > b.GetMinGasPrice();
+            }
+
+            // Otherwise, prioritize the tx with the minimum size
+            if(a.GetTxSize() != b.GetTxSize()) {
+                return a.GetTxSize() < b.GetTxSize();
+            }
+
+            // If the txs are identical in their minimum gas prices and tx size
+            // order based on the tx hash for consistency.
+            return a.GetTx().GetHash() < b.GetTx().GetHash();
+        }
+
+        // If neither of the txs we are comparing are contract txs, use the standard comparison based on ancestor fees / ancestor size
+        return CompareTxMemPoolEntryByAncestorFee()(a, b);
+    }
+};
+
 // Multi_index tag names
 struct descendant_score {};
 struct entry_time {};
 struct ancestor_score {};
 struct index_by_wtxid {};
+struct ancestor_score_or_gas_price {};
 
 class CBlockPolicyEstimator;
 
@@ -499,6 +637,12 @@ public:
                 boost::multi_index::tag<ancestor_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,
                 CompareTxMemPoolEntryByAncestorFee
+                >,
+            // sorted by fee rate with gas price (if contract tx) or ancestors otherwise
+            boost::multi_index::ordered_non_unique<
+                boost::multi_index::tag<ancestor_score_or_gas_price>,
+                boost::multi_index::identity<CTxMemPoolEntry>,
+                CompareTxMemPoolEntryByAncestorFeeOrGasPrice
             >
         >
     > indexed_transaction_set;
@@ -553,6 +697,20 @@ private:
 
     typedef std::map<uint256, std::vector<CSpentIndexKey> > mapSpentIndexInserted;
     mapSpentIndexInserted mapSpentInserted;
+
+    //////////////////////////////////////////////////////////////// // globe
+    typedef std::map<CMempoolAddressDeltaKey, CMempoolAddressDelta, CMempoolAddressDeltaKeyCompare> addressDeltaMap;
+    addressDeltaMap mapAddress;
+
+    typedef std::map<uint256, std::vector<CMempoolAddressDeltaKey> > addressDeltaMapInserted;
+    addressDeltaMapInserted mapAddressInserted;
+
+    typedef std::map<CSpentIndexKey, CSpentIndexValue, CSpentIndexKeyCompare> mapSpentIndex;
+    mapSpentIndex mapSpent;
+
+    typedef std::map<uint256, std::vector<CSpentIndexKey> > mapSpentIndexInserted;
+    mapSpentIndexInserted mapSpentInserted;
+    ////////////////////////////////////////////////////////////////
 
     void UpdateParent(txiter entry, txiter parent, bool add) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void UpdateChild(txiter entry, txiter child, bool add) EXCLUSIVE_LOCKS_REQUIRED(cs);
