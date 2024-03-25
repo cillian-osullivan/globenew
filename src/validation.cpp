@@ -120,6 +120,12 @@ const std::vector<std::string> CHECKLEVEL_DOC {
  * */
 static constexpr int PRUNE_LOCK_BUFFER{10};
 
+std::unique_ptr<QtumState> globalState;
+std::shared_ptr<dev::eth::SealEngineFace> globalSealEngine;
+bool fRecordLogOpcodes = false;
+bool fIsVMlogFile = false;
+bool fGettingValuesDGP = false;
+
 /**
  * Mutex to guard access to validation specific variables, such as reading
  * or changing the chainstate.
@@ -199,6 +205,7 @@ std::atomic_bool fSkipRangeproof(false);
 std::atomic_bool fBusyImporting(false);        // covers ActivateBestChain too
 } // namespace globe
 
+std::unique_ptr<StorageResults> pstorageresult;
 
 bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
                        const CCoinsViewCache& inputs, unsigned int flags, bool cacheSigStore,
