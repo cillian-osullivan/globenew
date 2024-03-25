@@ -13,6 +13,7 @@
 #include <chain.h>
 #include <protocol.h>
 #include <util/hash_type.h>
+#include <libethashseal/GenesisInfo.h>
 
 #include <memory>
 #include <string>
@@ -169,6 +170,9 @@ public:
     const std::string& Bech32HRP() const { return bech32_hrp; }
     const std::vector<uint8_t>& FixedSeeds() const { return vFixedSeeds; }
     const CCheckpointData& Checkpoints() const { return checkpointData; }
+    std::string EVMGenesisInfo() const;
+    std::string EVMGenesisInfo(int nHeight) const;
+    std::string EVMGenesisInfo(const dev::eth::EVMConsensus& evmConsensus) const;
 
     void UpdateOpSenderBlockHeight(int nHeight);
     void UpdateBtcEcrecoverBlockHeight(int nHeight);
@@ -198,6 +202,7 @@ public:
     Consensus::Params& GetConsensus_nc() { assert(strNetworkID == "regtest"); return consensus; }
 
 protected:
+    dev::eth::Network GetEVMNetwork() const;
     CChainParams() {}
 
     void SetLastImportHeight()
