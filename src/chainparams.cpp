@@ -1244,3 +1244,83 @@ CChainParams &RegtestParams()
 {
     return *globalChainParams.get();
 };
+
+void CChainParams::UpdateOpSenderBlockHeight(int nHeight)
+{
+    consensus.QIP5Height = nHeight;
+}
+
+void UpdateOpSenderBlockHeight(int nHeight)
+{
+    const_cast<CChainParams*>(globalChainParams.get())->UpdateOpSenderBlockHeight(nHeight);
+}
+
+void CChainParams::UpdateBtcEcrecoverBlockHeight(int nHeight)
+{
+    consensus.QIP6Height = nHeight;
+}
+
+void UpdateBtcEcrecoverBlockHeight(int nHeight)
+{
+    const_cast<CChainParams*>(globalChainParams.get())->UpdateBtcEcrecoverBlockHeight(nHeight);
+}
+
+void CChainParams::UpdateConstantinopleBlockHeight(int nHeight)
+{
+    consensus.QIP7Height = nHeight;
+}
+
+void UpdateConstantinopleBlockHeight(int nHeight)
+{
+    const_cast<CChainParams*>(globalChainParams.get())->UpdateConstantinopleBlockHeight(nHeight);
+}
+
+void CChainParams::UpdateReduceBlocktimeHeight(int nHeight)
+{
+    consensus.nReduceBlocktimeHeight = nHeight;
+}
+
+void UpdateReduceBlocktimeHeight(int nHeight)
+{
+    const_cast<CChainParams*>(globalChainParams.get())->UpdateReduceBlocktimeHeight(nHeight);
+}
+
+void CChainParams::UpdateMuirGlacierHeight(int nHeight)
+{
+    consensus.nMuirGlacierHeight = nHeight;
+}
+
+void UpdateMuirGlacierHeight(int nHeight)
+{
+    const_cast<CChainParams*>(globalChainParams.get())->UpdateMuirGlacierHeight(nHeight);
+}
+
+void CChainParams::UpdateLondonHeight(int nHeight)
+{
+    consensus.nLondonHeight = nHeight;
+}
+
+void UpdateLondonHeight(int nHeight)
+{
+    const_cast<CChainParams*>(globalChainParams.get())->UpdateLondonHeight(nHeight);
+}
+
+void CChainParams::UpdateTaprootHeight(int nHeight)
+{
+    if(nHeight == 0)
+    {
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 0; // No activation delay
+    }
+    else
+    {
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nStartTime = 0;
+        // Min block number for activation, the number must be divisible with 144
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = nHeight;
+    }
+}
+
+void UpdateTaprootHeight(int nHeight)
+{
+    const_cast<CChainParams*>(globalChainParams.get())->UpdateTaprootHeight(nHeight);
+}
