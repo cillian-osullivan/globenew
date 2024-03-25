@@ -8,10 +8,12 @@
 #include <chainparamsseeds.h>
 #include <consensus/merkle.h>
 #include <deploymentinfo.h>
+#include <consensus/consensus.h>
 #include <hash.h> // for signet block challenge hash
 #include <script/interpreter.h>
 #include <util/string.h>
 #include <util/system.h>
+#include <util/convert.h>
 
 #include <chain/chainparamsimport.h>
 
@@ -19,6 +21,12 @@
 
 // Globe
 #include <key/keyutil.h>
+
+///////////////////////////////////////////// // globe
+#include <libdevcore/SHA3.h>
+#include <libdevcore/RLP.h>
+#include "arith_uint256.h"
+/////////////////////////////////////////////
 
 int64_t CChainParams::GetCoinYearReward(int64_t nTime) const
 {
@@ -140,7 +148,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     txNew.nVersion = 1;
     txNew.vin.resize(1);
     txNew.vout.resize(1);
-    txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    txNew.vin[0].scriptSig = CScript() << 00 << 488804799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
     txNew.vout[0].nValue = genesisReward;
     txNew.vout[0].scriptPubKey = genesisOutputScript;
 
@@ -152,6 +160,8 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
     genesis.hashPrevBlock.SetNull();
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
+    genesis.hashStateRoot = uint256(h256Touint(dev::h256("e965ffd002cd6ad0e2dc402b8044de833e06b23127ea8c3d80aec91410771495"))); // globe
+    genesis.hashUTXORoot = uint256(h256Touint(dev::sha3(dev::rlp("")))); // globe
     return genesis;
 }
 
@@ -487,9 +497,11 @@ public:
 
         // Deployment of Taproot (BIPs 340-342)
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].bit = 2;
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nStartTime = 1619222400; // April 24th, 2021
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nTimeout = 1628640000; // August 11th, 2021
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 709632; // Approximately November 12th, 2021
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        // Min block number for activation, the number must be divisible by 2016
+        // Replace 0xffffc0 with the activation block number
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 2080512;
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000001217ddce4920bddbc9c");
@@ -572,38 +584,19 @@ public:
         bech32Prefixes[EXT_ACC_HASH].assign         ("pea",(const char*)"pea"+3);
         bech32Prefixes[STAKE_ONLY_PKADDR].assign    ("pcs",(const char*)"pcs"+3);
 
-        bech32_hrp = "pw";
+        bech32_hrp = "glb";
         vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_main), std::end(chainparams_seed_main));
 
         fDefaultConsistencyChecks = false;
         fRequireStandard = true;
+        fMineBlocksOnDemand = false;
         m_is_test_chain = false;
         m_is_mockable_chain = false;
+        fHasHardwareWalletSupport = true;
 
         checkpointData = {
             {
-                { 5000,     uint256S("0xe786020ab94bc5461a07d744f3631a811b4ebf424fceda12274f2321883713f4")},
-                { 15000,    uint256S("0xafc73ac299f2e6dd309077d230fccef547b9fc24379c1bf324dd3683b13c61c3")},
-                { 30000,    uint256S("0x35d95c12799323d7b418fd64df9d88ef67ef27f057d54033b5b2f38a5ecaacbf")},
-                { 91000,    uint256S("0x4d1ffaa5b51431918a0c74345e2672035c743511359ac8b1be67467b02ff884c")},
-                { 112250,   uint256S("0x89e4b23471aea7a875df835d6f89613fd87ba649e7a1d8cb892917d0080ef337")},
-                { 213800,   uint256S("0xfd6c0e5f7444a9e09a5fa1652db73d5b8628aeabe162529a5356be700509aa80")},
-                { 303640,   uint256S("0x7cc035d7888ee6d824cec8ff01a6287a71873d874f72a5fd3706d227b88f8e99")},
-                { 443228,   uint256S("0x1e2ae3edb2fa5b398c2f719d2bbb44b3089fb96170b6676c0c963f12bceba489")},
-                { 583322,   uint256S("0x2be0224e40ddf4763f61ff6db088806f3ad5c6530ea7a6801b067ecbbd13fec9")},
-                { 634566,   uint256S("0xc330a61e218b06d3d567c459b54e83ab682a366fc00b77d69dd78c6ed9655a2e")},
-                { 777625,   uint256S("0x75b2b1412610c1ff54e49fc38222f3f45fe934b0e485ccae7b5d461b94510734")},
-                { 856749,   uint256S("0x6b705dbf87345594314152841212a532753f11ec711ac81afc64f31eb048df19")},
-                { 887180,   uint256S("0xf9f1e91f82e73d4781052e42c8b814b8265e0929d4c16284db3feb354bfc317c")},
-                { 962370,   uint256S("0x43c3d5568f3b3467e5142f86445d5b12b923e3e5c4a1e6566d90a7fad807799c")},
-                { 992790,   uint256S("0xea97054e60558199d5c94627116fbfa9f3be1c63d45510963d1a308fe152974b")},
-                { 1026710,  uint256S("0xdcbe7be05060974cca33a52790e047a73358812102a97cd5b3089f2469bd6601")},
-                { 1075660,  uint256S("0x1357966bfddceb8ea97f15da76e61087be6254d0b62ce9d4959ceee9b75c89f3")},
-                { 1102310,  uint256S("0x4e43167170e4639dbb1fdb84cb5735853f9595ff42713c143b70fd0625a382cd")},
-                { 1117588,  uint256S("0x6b13071bc3f5689a3f8a29808f726654283714461076ea890f4272574ff2659f")},
-                { 1159409,  uint256S("0x4e0328ad2e2cb4fe6cb9a46c675a00673ff0e2e3c8185d7055e404adefbc7a96")},
-                { 1236270,  uint256S("0xb35f0e0cde108c282380d6850bae83c1fd2e961781e2289e2b2cd3d17ff039ab")},
-                { 1303280,  uint256S("0x6d3abd8a80371e78957cc30af3e84c45c44b2eb26175b50c5ba7ebc9e990189c")},
+                { 0,     uint256S("0xe786020ab94bc5461a07d744f3631a811b4ebf424fceda12274f2321883713f4")},
             }
         };
 
@@ -613,8 +606,8 @@ public:
 
         chainTxData = ChainTxData{
             // Data from rpc: getchaintxstats 4096 6d3abd8a80371e78957cc30af3e84c45c44b2eb26175b50c5ba7ebc9e990189c
-            .nTime    = 1668249104,
-            .nTxCount = 1639931,
+            .nTime    = 0,
+            .nTxCount = 0,
             .dTxRate  = 0.01,
         };
     }
